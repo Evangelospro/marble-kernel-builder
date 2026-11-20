@@ -168,9 +168,9 @@ assert_name \
   MANAGER=none ENABLE_SUSFS=false
 
 assert_name \
-  'AK3_marble_LOS_aosp-pablo_resukisu-v4.1.0-code34990_r9.zip' \
+  'AK3_marble_LOS_aosp-pablo_bakasu-v4.1.0-code34990_r9.zip' \
   KERNEL_SOURCE=aosp-pablo ROM_FAMILY=los \
-  MANAGER=resukisu ENABLE_SUSFS=false \
+  MANAGER=bakasu ENABLE_SUSFS=false \
   manager_build_version_name=v4.1.0 manager_build_version_code=34990
 
 assert_name \

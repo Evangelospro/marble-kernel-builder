@@ -10,13 +10,13 @@ Last checked: 2026-07-13 (manager policy + multi-kernel presets including `pa-gr
 | `kernelsu` | Pass | Blocked | `tiann/KernelSU@main`; official KernelSU SUSFS is not used |
 | `kernelsu-next` | Pass | Pass | `KernelSU-Next/KernelSU-Next@dev` without SUSFS; `pershoot/KernelSU-Next@dev-susfs` with SUSFS |
 | `sukisu-ultra` | Pass | Pass | `SukiSU-Ultra/SukiSU-Ultra@main` without SUSFS; `SukiSU-Ultra/SukiSU-Ultra@builtin` with SUSFS |
-| `resukisu` | Pass | Pass | `ReSukiSU/ReSukiSU@main` |
+| `bakasu` | Pass | Pass | `Baka-SU/BakaSU@main` |
 
 For final SUSFS builds, use only:
 
 - `manager=kernelsu-next`
 - `manager=sukisu-ultra`
-- `manager=resukisu`
+- `manager=bakasu`
 
 Do not use SUSFS with:
 

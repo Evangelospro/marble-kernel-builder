@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/badge/KernelSU-supported-4CAF50?style=flat-square&logo=android&logoColor=white" alt="KernelSU" />
   <img src="https://img.shields.io/badge/KernelSU--Next-supported-4CAF50?style=flat-square&logo=android&logoColor=white" alt="KernelSU-Next" />
   <img src="https://img.shields.io/badge/SukiSU_Ultra-supported-4CAF50?style=flat-square&logo=android&logoColor=white" alt="SukiSU Ultra" />
-  <img src="https://img.shields.io/badge/ReSukiSU-supported-4CAF50?style=flat-square&logo=android&logoColor=white" alt="ReSukiSU" />
+  <img src="https://img.shields.io/badge/BakaSU-supported-4CAF50?style=flat-square&logo=android&logoColor=white" alt="BakaSU" />
   <img src="https://img.shields.io/badge/LTO-thin_·_full_·_none-8E24AA?style=flat-square" alt="LTO" />
 </p>
 
@@ -76,7 +76,7 @@ Root managers and SUSFS are applied **inside the runner's temp workspace** and t
 | | Capability |
 |:---:|---|
 | 🧬 | **5 kernel sources** — one dropdown: Melt (HyperOS), LineageOS, Evolution-X, aosp-pablo, pa-gr |
-| 🔑 | **4 root managers + baseline** — KernelSU, KernelSU-Next, SukiSU Ultra, ReSukiSU, or clean no-root |
+| 🔑 | **4 root managers + baseline** — KernelSU, KernelSU-Next, SukiSU Ultra, BakaSU, or clean no-root |
 | 🛡️ | **Optional SUSFS** — pinned `v2.2.0` / `v2.1.0` presets, or a custom ref |
 | ⚙️ | **Selectable LTO** — `none` · `thin` (default) · `full`, hardened for free runners |
 | 📦 | **AnyKernel3 ZIPs** — codename verification + automatic boot backup before flashing |
@@ -182,12 +182,12 @@ Only **official upstream** manager repositories are allowlisted at CI time. Rand
 | `kernelsu` | ✅ | ❌ | [`tiann/KernelSU@main`](https://github.com/tiann/KernelSU) |
 | `kernelsu-next` | ✅ | ✅ | official [`@dev`](https://github.com/KernelSU-Next/KernelSU-Next) → SUSFS switches to [`pershoot@dev-susfs`](https://github.com/pershoot/KernelSU-Next) |
 | `sukisu-ultra` | ✅ | ✅ | [`@main`](https://github.com/SukiSU-Ultra/SukiSU-Ultra) → SUSFS switches to official `@builtin` |
-| `resukisu` | ✅ | ✅ | [`@main`](https://github.com/ReSukiSU/ReSukiSU) — manager-side SUSFS is built in |
+| `bakasu` | ✅ | ✅ | [`@main`](https://github.com/Baka-SU/BakaSU) — manager-side SUSFS is built in |
 
 > [!NOTE]
 > **The one sanctioned exception** is `pershoot/KernelSU-Next@dev-susfs` — a CI-proven fork of official `dev` — used *only* for KernelSU-Next + SUSFS, because the official KernelSU-Next SUSFS path is not Marble-compatible. Official **KernelSU + SUSFS stays rejected** until a compatible integration exists.
 
-**For SUSFS builds, use `kernelsu-next`, `sukisu-ultra`, or `resukisu`.** SUSFS with `none` or `kernelsu` is blocked at validation.
+**For SUSFS builds, use `kernelsu-next`, `sukisu-ultra`, or `bakasu`.** SUSFS with `none` or `kernelsu` is blocked at validation.
 
 <details>
 <summary><b>SUSFS pins &amp; userspace module</b></summary>
@@ -271,8 +271,8 @@ flowchart LR
 | `build_kernelsu` | `false` | KernelSU (no SUSFS) |
 | `build_kernelsu_next` | `false` | KernelSU-Next |
 | `build_sukisu_ultra` | `false` | SukiSU Ultra |
-| `build_resukisu` | `false` | ReSukiSU |
-| `enable_susfs` | `false` | Applies to KSU-Next, SukiSU Ultra, ReSukiSU |
+| `build_bakasu` | `false` | BakaSU |
+| `enable_susfs` | `false` | Applies to KSU-Next, SukiSU Ultra, BakaSU |
 | `susfs_version` | `latest` | `latest` · `v2.2.0` · `v2.1.0` · `custom` |
 | `susfs_ref` | *(empty)* | Branch/tag/commit — only with `custom` |
 | `toolchain` | **`auto`** | `auto` picks the preset's recommendation · or force `android-r416183b` / `llvm-22.1.8` |
@@ -346,7 +346,7 @@ AK3_marble_<FAMILY>_<source>_<manager>[-version][-codeN][_susfs-vX.Y.Z]_rN.zip
 ```text
 AK3_marble_MELT_melt_ksunext-v3.2.0-code33203_susfs-v2.2.0_r121.zip
 AK3_marble_LOS_evolution-x_sukisu-v4.1.3-code40813_susfs-v2.2.0_r122.zip
-AK3_marble_LOS_aosp-pablo_resukisu-v4.1.0-code34990_r123.zip
+AK3_marble_LOS_aosp-pablo_bakasu-v4.1.0-code34990_r123.zip
 AK3_marble_MELT_melt_noroot_r124.zip
 ```
 
@@ -378,7 +378,7 @@ Each step proves one new variable. Verify before moving on.
 |:---:|---|---|
 | **1** | `melt` · `build_none` · `lto=thin` · `image-only` | Toolchain, packaging, your flash process |
 | **2** | `melt` · one manager · SUSFS **off** | Manager integration |
-| **3** | `melt` · `kernelsu-next` / `sukisu-ultra` / `resukisu` · SUSFS **on** | The boot-proven root path |
+| **3** | `melt` · `kernelsu-next` / `sukisu-ultra` / `bakasu` · SUSFS **on** | The boot-proven root path |
 | **4** | LOS preset · `toolchain=auto` · `build_none` first | The armv9 / GKI-fragment path |
 | **5** | Multi-manager matrix · optional draft release | Fan-out and release plumbing |
 
@@ -392,7 +392,7 @@ Each step proves one new variable. Verify before moving on.
 <tr><td width="60" align="center"><h3>1</h3></td><td>Download the ZIP and <b>verify its SHA-256</b> against the build summary.</td></tr>
 <tr><td align="center"><h3>2</h3></td><td>Flash to the <b>active slot</b> with <a href="https://github.com/fatalcoder524/KernelFlasher/releases">Kernel Flasher</a>.</td></tr>
 <tr><td align="center"><h3>3</h3></td><td>AnyKernel3 verifies the codename (<code>marble</code>/<code>marblein</code>) and <b>auto-backs up your current boot</b> to <code>/sdcard/marble-kernel-backup/</code>.</td></tr>
-<tr><td align="center"><h3>4</h3></td><td><b>Manager handoff is automatic, Magisk-style</b> (from Android or recovery): when the root manager changes (e.g. from the ROM's built-in KernelSU-Next), the old <code>/data/adb/ksud</code> + <code>/data/adb/ksu</code> move to <code>/data/adb/marble-backup/</code> (another fork's <code>ksud</code> can hang boot), modules are disabled for the first boot, and the manager's own <code>ksud</code> is installed so root works immediately. <b>App and <code>ksud</code> are the exact build of the manager commit the kernel was built from</b>: CI builds the kernel from the newest manager commit that has an official, production-signed CI build (ReSukiSU, KernelSU-Next), downloads that build and fails if its <code>versionCode</code> differs from the kernel's. Where no such build exists (SUSFS forks, KernelSU, SukiSU), nothing is bundled and you install the matching app yourself. On first boot a one-shot <code>boot-completed.d</code> hook installs the official manager app, removes other KernelSU-family manager apps (undo: <code>pm install-existing &lt;package&gt;</code>) and finishes <code>ksud install</code>; log at <code>/data/adb/marble-pending.log</code>. Flashed from Android, the app is installed right away too. Afterwards, re-enable your modules in the app.</td></tr>
+<tr><td align="center"><h3>4</h3></td><td><b>Manager handoff is automatic, Magisk-style</b> (from Android or recovery): when the root manager changes (e.g. from the ROM's built-in KernelSU-Next), the old <code>/data/adb/ksud</code> + <code>/data/adb/ksu</code> move to <code>/data/adb/marble-backup/</code> (another fork's <code>ksud</code> can hang boot), modules are disabled for the first boot, and the manager's own <code>ksud</code> is installed so root works immediately. <b>App and <code>ksud</code> are the exact build of the manager commit the kernel was built from</b>: CI builds the kernel from the newest manager commit that has an official, production-signed CI build (BakaSU, KernelSU-Next), downloads that build and fails if its <code>versionCode</code> differs from the kernel's. Where no such build exists (SUSFS forks, KernelSU, SukiSU), nothing is bundled and you install the matching app yourself. On first boot a one-shot <code>boot-completed.d</code> hook installs the official manager app, removes other KernelSU-family manager apps (undo: <code>pm install-existing &lt;package&gt;</code>) and finishes <code>ksud install</code>; log at <code>/data/adb/marble-pending.log</code>. Flashed from Android, the app is installed right away too. Afterwards, re-enable your modules in the app.</td></tr>
 <tr><td align="center"><h3>5</h3></td><td>SUSFS build? Also install the <a href="https://github.com/sidex15/susfs4ksu-module/releases">SUSFS userspace module</a> and set your hiding rules.</td></tr>
 </table>
 
@@ -448,7 +448,7 @@ Every moving input is pinned and recorded. Full table: [`docs/versions.md`](docs
 | **KernelSU** | `tiann/KernelSU@main` |
 | **KernelSU-Next** | official `@dev` · SUSFS `pershoot@dev-susfs` |
 | **SukiSU Ultra** | `@main` · SUSFS `@builtin` |
-| **ReSukiSU** | `ReSukiSU@main` |
+| **BakaSU** | `BakaSU@main` |
 
 Review `config/susfs-refs.json` and `config/managers.json` every **2–4 weeks**, or immediately after upstream breaks CI.
 
@@ -468,7 +468,7 @@ Review `config/susfs-refs.json` and `config/managers.json` every **2–4 weeks**
 | **Concurrency** | Groups keyed on source + toolchain + LTO + SUSFS + scope, so unrelated builds never cancel each other |
 | **Weekly smoke** | `weekly-melt-smoke.yml` builds Melt/no-root every Monday 06:00 UTC to catch upstream drift |
 
-**Device boot proof:** KernelSU-Next / SukiSU Ultra / ReSukiSU + SUSFS `v2.2.0` on **Melt / HyperOS**, 2026-06-22. LOS-family manager builds are verified at compile-and-package level in CI, and have not been re-boot-tested on device.
+**Device boot proof:** KernelSU-Next / SukiSU Ultra / BakaSU + SUSFS `v2.2.0` on **Melt / HyperOS**, 2026-06-22. LOS-family manager builds are verified at compile-and-package level in CI, and have not been re-boot-tested on device.
 
 </details>
 
@@ -525,7 +525,7 @@ marble-kernel-builder/
 - [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
 - [pershoot `dev-susfs`](https://github.com/pershoot/KernelSU-Next)
 - [SukiSU Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra)
-- [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)
+- [BakaSU](https://github.com/Baka-SU/BakaSU)
 
 **SUSFS**
 
@@ -541,7 +541,7 @@ marble-kernel-builder/
 
 This builder is glue. The hard parts belong to other people.
 
-**[osm0sis](https://github.com/osm0sis)** — AnyKernel3 · **[tiann](https://github.com/tiann)** — KernelSU · **[KernelSU-Next team](https://github.com/KernelSU-Next)** · **[pershoot](https://github.com/pershoot)** — the KSU-Next SUSFS path · **[SukiSU Ultra team](https://github.com/SukiSU-Ultra)** · **[ReSukiSU team](https://github.com/ReSukiSU)** · **[simonpunk](https://gitlab.com/simonpunk)** — susfs4ksu · **[sidex15](https://github.com/sidex15)** — SUSFS module · **[WildKernels](https://github.com/WildKernels)** — reference CI, LTO and cache patterns · **Melt, LineageOS, Evolution-X, aosp-pablo and pa-gr maintainers** — the kernel trees · **the marble community** — HyperOS and LOS-family device support.
+**[osm0sis](https://github.com/osm0sis)** — AnyKernel3 · **[tiann](https://github.com/tiann)** — KernelSU · **[KernelSU-Next team](https://github.com/KernelSU-Next)** · **[pershoot](https://github.com/pershoot)** — the KSU-Next SUSFS path · **[SukiSU Ultra team](https://github.com/SukiSU-Ultra)** · **[BakaSU team](https://github.com/BakaSU)** · **[simonpunk](https://gitlab.com/simonpunk)** — susfs4ksu · **[sidex15](https://github.com/sidex15)** — SUSFS module · **[WildKernels](https://github.com/WildKernels)** — reference CI, LTO and cache patterns · **Melt, LineageOS, Evolution-X, aosp-pablo and pa-gr maintainers** — the kernel trees · **the marble community** — HyperOS and LOS-family device support.
 
 🙏 Thank you to everyone who publishes their work openly.
 

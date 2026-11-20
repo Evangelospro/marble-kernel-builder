@@ -44,9 +44,9 @@
     "notes": "Official main branch without SUSFS; official builtin branch is selected automatically when SUSFS is enabled.",
     "package": "com.sukisu.ultra"
   },
-  "resukisu": {
-    "display": "ReSukiSU",
-    "repo": "ReSukiSU/ReSukiSU",
+  "bakasu": {
+    "display": "BakaSU",
+    "repo": "Baka-SU/BakaSU",
     "default_ref": "main",
     "susfs_ref": "main",
     "setup_path": "kernel/setup.sh",
@@ -57,7 +57,7 @@
       "repo": "Baka-SU/BakaSU",
       "workflow": "build-manager.yml",
       "artifact": "Manager-release",
-      "notes": "ReSukiSU/ReSukiSU redirects here. Pushes to main build a production-signed Manager-release artifact (PR builds use a throwaway key)."
+      "notes": "Pushes to main build a production-signed Manager-release artifact (PR builds use a throwaway key)."
     }
   }
 }

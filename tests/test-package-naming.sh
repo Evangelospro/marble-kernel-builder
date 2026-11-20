@@ -33,11 +33,11 @@ assert_name \
   manager_build_version_code=40813 manager_commit=b88403d2561b6e00 \
   susfs_reported_version=v2.2.0
 
-# Melt + ReSukiSU, no SUSFS (omit susfs segment)
+# Melt + BakaSU, no SUSFS (omit susfs segment)
 assert_name \
-  'AK3_marble_MELT_melt_resukisu-88e7f51-code34990_r9.zip' \
+  'AK3_marble_MELT_melt_bakasu-88e7f51-code34990_r9.zip' \
   KERNEL_SOURCE=melt ROM_FAMILY=hyperos \
-  MANAGER=resukisu ENABLE_SUSFS=false \
+  MANAGER=bakasu ENABLE_SUSFS=false \
   manager_version_code=34990 manager_commit=88e7f51c3840436b
 
 # Melt + noroot

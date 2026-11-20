@@ -27,7 +27,7 @@ manager_display() {
     kernelsu)      echo "KernelSU" ;;
     kernelsu-next) echo "KernelSU-Next" ;;
     sukisu-ultra)  echo "SukiSU Ultra" ;;
-    resukisu)      echo "ReSukiSU" ;;
+    bakasu)      echo "BakaSU" ;;
     *)             echo "$1" ;;
   esac
 }
@@ -37,7 +37,7 @@ manager_app_url() {
     kernelsu)      echo "https://github.com/tiann/KernelSU/releases" ;;
     kernelsu-next) echo "https://github.com/KernelSU-Next/KernelSU-Next/releases" ;;
     sukisu-ultra)  echo "https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases" ;;
-    resukisu)      echo "https://github.com/ReSukiSU/ReSukiSU" ;;
+    bakasu)      echo "https://github.com/Baka-SU/BakaSU" ;;
     *)             echo "" ;;
   esac
 }

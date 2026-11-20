@@ -74,9 +74,9 @@ make_artifact "${tmp_dir}/marble-sukisu-ultra-susfs-image-only-r5" \
   sukisu-ultra SukiSU-Ultra/SukiSU-Ultra builtin b88403d2561b6e00dff84a3c851e630c62f57fd0 '' 40813 'v4.1.3-b88403d2@HEAD' \
   AK3_marble_MELT_melt_sukisu-v4.1.3-b88403d2-code40813_susfs-v2.2.0_r5.zip sukisu
 
-make_artifact "${tmp_dir}/marble-resukisu-susfs-image-only-r5" \
-  resukisu ReSukiSU/ReSukiSU main 88e7f51c3840436b982276ec35bf2876cfec2713 '' 34989 'v4.1.0-d0f59d06@ReSukiSU' \
-  AK3_marble_MELT_melt_resukisu-v4.1.0-d0f59d06-code34989_susfs-v2.2.0_r5.zip resukisu
+make_artifact "${tmp_dir}/marble-bakasu-susfs-image-only-r5" \
+  bakasu Baka-SU/BakaSU main 88e7f51c3840436b982276ec35bf2876cfec2713 '' 34989 'v4.1.0-d0f59d06@BakaSU' \
+  AK3_marble_MELT_melt_bakasu-v4.1.0-d0f59d06-code34989_susfs-v2.2.0_r5.zip bakasu
 
 mkdir -p "${tmp_dir}/unrelated-artifact-r5"
 printf '%s\n' 'artifact without flash metadata' > "${tmp_dir}/unrelated-artifact-r5/build.log"
@@ -106,20 +106,20 @@ required_patterns=(
   '^## .*Managers$'
   '\| \*\*KernelSU-Next\*\* \| `v3\.2\.0` \| `33201` \|'
   '\| \*\*SukiSU Ultra\*\* \| `v4\.1\.3-b88403d2@HEAD` \| `40813` \|'
-  '\| \*\*ReSukiSU\*\* \| `v4\.1\.0-d0f59d06@ReSukiSU` \| `34989` \|'
+  '\| \*\*BakaSU\*\* \| `v4\.1\.0-d0f59d06@BakaSU` \| `34989` \|'
   '<summary><b>KernelSU-Next</b> — v3\.2\.0 · code 33201 · ✅ Passed</summary>'
   '<summary><b>SukiSU Ultra</b> — v4\.1\.3-b88403d2@HEAD · code 40813 · ✅ Passed</summary>'
-  '<summary><b>ReSukiSU</b> — v4\.1\.0-d0f59d06@ReSukiSU · code 34989 · ✅ Passed</summary>'
+  '<summary><b>BakaSU</b> — v4\.1\.0-d0f59d06@BakaSU · code 34989 · ✅ Passed</summary>'
   '^## .*SUSFS$'
   '^## .*Artifacts & checksums$'
   '^## .*Installation$'
   'AK3_marble_MELT_melt_ksunext-v3\.2\.0-code33201_susfs-v2\.2\.0_r5\.zip'
   'AK3_marble_MELT_melt_sukisu-v4\.1\.3-b88403d2-code40813_susfs-v2\.2\.0_r5\.zip'
-  'AK3_marble_MELT_melt_resukisu-v4\.1\.0-d0f59d06-code34989_susfs-v2\.2\.0_r5\.zip'
+  'AK3_marble_MELT_melt_bakasu-v4\.1\.0-d0f59d06-code34989_susfs-v2\.2\.0_r5\.zip'
   '^## .*Credits$'
   'pershoot/KernelSU-Next'
   'SukiSU-Ultra/SukiSU-Ultra'
-  'ReSukiSU/ReSukiSU'
+  'Baka-SU/BakaSU'
   'osm0sis/AnyKernel3'
   'Built with GitHub Actions · for Marble'
 )

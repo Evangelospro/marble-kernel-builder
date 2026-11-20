@@ -14,7 +14,7 @@ SUSFS_EXPECTED_VERSION="${SUSFS_EXPECTED_VERSION:-}"
 MANAGER_REF="${MANAGER_REF:-}"
 
 case "${MANAGER}" in
-  none|kernelsu|kernelsu-next|sukisu-ultra|resukisu) ;;
+  none|kernelsu|kernelsu-next|sukisu-ultra|bakasu) ;;
   *) echo "::error::Unsupported manager: ${MANAGER}"; exit 1 ;;
 esac
 
@@ -66,7 +66,7 @@ if [[ -z "${SOURCE_REF}" || ! "${SOURCE_REF}" =~ ^[A-Za-z0-9._/-]+$ ]]; then
 fi
 
 if [[ "${ENABLE_SUSFS}" == "true" && "${MANAGER}" == "none" ]]; then
-  echo "::error::SUSFS requires a manager. Choose kernelsu, kernelsu-next, sukisu-ultra, resukisu, or custom."
+  echo "::error::SUSFS requires a manager. Choose kernelsu, kernelsu-next, sukisu-ultra, bakasu, or custom."
   exit 1
 fi
 
@@ -87,8 +87,8 @@ if [[ "${ENABLE_SUSFS}" == "true" ]]; then
     sukisu-ultra)
       [[ -z "${MANAGER_REF}" || "${MANAGER_REF}" == "builtin" ]] || { echo "::error::SukiSU Ultra + SUSFS requires official ref builtin"; exit 1; }
       ;;
-    resukisu)
-      [[ -z "${MANAGER_REF}" || "${MANAGER_REF}" == "main" ]] || { echo "::error::ReSukiSU + SUSFS requires official ref main"; exit 1; }
+    bakasu)
+      [[ -z "${MANAGER_REF}" || "${MANAGER_REF}" == "main" ]] || { echo "::error::BakaSU + SUSFS requires official ref main"; exit 1; }
       ;;
   esac
   case "${SUSFS_KERNEL_BRANCH}" in

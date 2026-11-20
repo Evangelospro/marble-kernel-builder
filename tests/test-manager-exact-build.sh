@@ -29,10 +29,10 @@ mkdir -p "${work}/config" "${work}/scripts/lib" "${work}/release" "${tmp_dir}/bi
 cp "${repo_root}/config/marble.env" "${work}/config/"
 cp "${repo_root}/scripts/resolve-manager-build.sh" "${repo_root}/scripts/fetch-manager-apk.sh" "${work}/scripts/"
 cp "${repo_root}/scripts/lib/apk_manifest.py" "${work}/scripts/lib/"
-# Point the resukisu package at the fixture app's package.
-jq '.resukisu.package = "io.appium.settings"' "${repo_root}/config/managers.json" > "${work}/config/managers.json"
+# Point the bakasu package at the fixture app's package.
+jq '.bakasu.package = "io.appium.settings"' "${repo_root}/config/managers.json" > "${work}/config/managers.json"
 
-(cd "${tmp_dir}" && rm -rf art && mkdir art && cp app.apk art/ReSukiSU_v1_220-release.apk && cd art && zip -q ../artifact.zip ./*.apk)
+(cd "${tmp_dir}" && rm -rf art && mkdir art && cp app.apk art/BakaSU_v1_220-release.apk && cd art && zip -q ../artifact.zip ./*.apk)
 cat > "${tmp_dir}/bin/gh" <<STUB
 #!/bin/sh
 [ "\$1" = api ] || exit 1
@@ -53,7 +53,7 @@ resolve() { # MANAGER MANAGER_REPO MANAGER_REF
     MANAGER_COMMIT=cccccccccccccccccccccccccccccccccccccccc bash scripts/resolve-manager-build.sh 2>/dev/null)
 }
 
-out="$(resolve resukisu ReSukiSU/ReSukiSU main)"
+out="$(resolve bakasu Baka-SU/BakaSU main)"
 eval "${out}"
 [[ "${manager_apk_artifact_id}" == 20 ]] || fail "should skip the expired newest build and pick artifact 20 (got: ${out})"
 [[ "${manager_apk_commit}" == bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb ]] || fail "kernel must use the commit of the official build"
@@ -73,7 +73,7 @@ manager_apk_artifact_id=20
 manager_apk_run_id=2
 manager_build_version_code=$1
 EOF
-  (cd "${work}" && PATH="${tmp_dir}/bin:${PATH}" GH_TOKEN=x MANAGER=resukisu KERNEL_DIR=k bash scripts/fetch-manager-apk.sh)
+  (cd "${work}" && PATH="${tmp_dir}/bin:${PATH}" GH_TOKEN=x MANAGER=bakasu KERNEL_DIR=k bash scripts/fetch-manager-apk.sh)
 }
 fetch 220 > "${tmp_dir}/fetch-ok.log" 2>&1 || { cat "${tmp_dir}/fetch-ok.log"; fail "matching build rejected"; }
 [[ -s "${work}/k/release/manager.apk" ]] || fail "APK not saved"

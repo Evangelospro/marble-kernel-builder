@@ -81,12 +81,12 @@ run_case sukisu_ultra \
   $'-- SukiSU-Ultra version: 40813 [v4.1.3-b88403d2@HEAD]\n-- SukiSU-Ultra: using SUSFS_INLINE_HOOK' \
   '40813' 'v4.1.3-b88403d2@HEAD' '' '' '' ''
 
-run_case resukisu \
-  $'-- ReSukiSU version code: 34989\n-- ReSukiSU version name: v4.1.0-d0f59d06@ReSukiSU\n-- Supported Unofficial Manager: MKSU, RKSU, KOWSU, SukiSU-Ultra, ReSukiSU' \
-  '34989' 'v4.1.0-d0f59d06@ReSukiSU' '' '' '' 'MKSU,RKSU,KOWSU,SukiSU-Ultra,ReSukiSU'
+run_case bakasu \
+  $'-- BakaSU version code: 34989\n-- BakaSU version name: v4.1.0-d0f59d06@BakaSU\n-- Supported Unofficial Manager: MKSU, RKSU, KOWSU, SukiSU-Ultra, BakaSU' \
+  '34989' 'v4.1.0-d0f59d06@BakaSU' '' '' '' 'MKSU,RKSU,KOWSU,SukiSU-Ultra,BakaSU'
 
-# ReSukiSU renamed itself BakaSU (REPO_NAME); real CI log lines.
-run_case resukisu \
+# Real CI log lines from BakaSU (v4.2.0-rc3).
+run_case bakasu \
   $'-- BakaSU version code: 35262\n-- BakaSU version name: v4.2.0-rc3-7b65bde0\n-- Supported Managers: KernelSU Official, KOWSU, BakaSU \n-- KERNEL_VERSION: 6.6' \
   '35262' 'v4.2.0-rc3-7b65bde0' '' '' '' ''
 

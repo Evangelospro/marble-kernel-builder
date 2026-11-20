@@ -45,7 +45,7 @@
 |:---|:---|:---:|:---:|:---:|:---:|
 | **KernelSU-Next** | `v3.2.0` | `33201` | 🛡️ on | ✅ passed | *sample* |
 | **SukiSU Ultra** | `v4.1.3-b88403d2@HEAD` | `40813` | 🛡️ on | ✅ passed | *sample* |
-| **ReSukiSU** | `v4.1.0-d0f59d06@ReSukiSU` | `34989` | 🛡️ on | ✅ passed | *sample* |
+| **BakaSU** | `v4.1.0-d0f59d06@BakaSU` | `34989` | 🛡️ on | ✅ passed | *sample* |
 
 ---
 
@@ -58,7 +58,7 @@
 |:---|:---|:---|
 | **KernelSU-Next** `v3.2.0` | `AK3_marble_MELT_melt_ksunext-v3.2.0-code33201_susfs-v2.2.0_r5.zip` | [KernelSU-Next app](https://github.com/KernelSU-Next/KernelSU-Next/releases) |
 | **SukiSU Ultra** `v4.1.3-b88403d2@HEAD` | `AK3_marble_MELT_melt_sukisu-v4.1.3-b88403d2-code40813_susfs-v2.2.0_r5.zip` | [SukiSU Ultra app](https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases) |
-| **ReSukiSU** `v4.1.0-d0f59d06@ReSukiSU` | `AK3_marble_MELT_melt_resukisu-v4.1.0-d0f59d06-code34989_susfs-v2.2.0_r5.zip` | [ReSukiSU app](https://github.com/ReSukiSU/ReSukiSU) |
+| **BakaSU** `v4.1.0-d0f59d06@BakaSU` | `AK3_marble_MELT_melt_bakasu-v4.1.0-d0f59d06-code34989_susfs-v2.2.0_r5.zip` | [BakaSU app](https://github.com/Baka-SU/BakaSU) |
 
 Every rooted ZIP here also needs the [SUSFS userspace module](https://github.com/sidex15/susfs4ksu-module/releases) matching `v2.2.0`. The kernel patch alone does not give you working hiding.
 
@@ -112,7 +112,7 @@ Every rooted ZIP here also needs the [SUSFS userspace module](https://github.com
 |:---|:---:|:---:|:---:|
 | **KernelSU-Next** | `false` | `false` | 105 / 2875 ( 3.65%) |
 | **SukiSU Ultra** | `false` | `false` | 105 / 2875 ( 3.65%) |
-| **ReSukiSU** | `false` | `false` | 105 / 2875 ( 3.65%) |
+| **BakaSU** | `false` | `false` | 105 / 2875 ( 3.65%) |
 
 ### ccache -s — KernelSU-Next
 
@@ -134,7 +134,7 @@ Local storage:
   Cache size (GB):  0.5 /  4.0 (12.50%)
 ```
 
-### ccache -s — ReSukiSU
+### ccache -s — BakaSU
 
 ```text
 Cacheable calls:   2875 / 4422 (65.02%)
@@ -153,7 +153,7 @@ Local storage:
 |:---|:---|:---:|:---:|:---:|
 | **KernelSU-Next** | `v3.2.0` | `33201` | ✅ | ✅ Passed |
 | **SukiSU Ultra** | `v4.1.3-b88403d2@HEAD` | `40813` | ✅ | ✅ Passed |
-| **ReSukiSU** | `v4.1.0-d0f59d06@ReSukiSU` | `34989` | ✅ | ✅ Passed |
+| **BakaSU** | `v4.1.0-d0f59d06@BakaSU` | `34989` | ✅ | ✅ Passed |
 
 <details>
 <summary><b>KernelSU-Next</b> — v3.2.0 · code 33201 · ✅ Passed</summary>
@@ -189,18 +189,18 @@ Local storage:
 </details>
 
 <details>
-<summary><b>ReSukiSU</b> — v4.1.0-d0f59d06@ReSukiSU · code 34989 · ✅ Passed</summary>
+<summary><b>BakaSU</b> — v4.1.0-d0f59d06@BakaSU · code 34989 · ✅ Passed</summary>
 
 <br/>
 
 | | |
 |:---|:---|
-| 📁 **Repository** | [`ReSukiSU/ReSukiSU @ main`](https://github.com/ReSukiSU/ReSukiSU) |
-| 🏷️ **Version name** | `v4.1.0-d0f59d06@ReSukiSU` |
+| 📁 **Repository** | [`Baka-SU/BakaSU @ main`](https://github.com/Baka-SU/BakaSU) |
+| 🏷️ **Version name** | `v4.1.0-d0f59d06@BakaSU` |
 | 🔢 **Version code** | `34989` |
-| 🔗 **Commit** | [`88e7f51`](https://github.com/ReSukiSU/ReSukiSU/commit/88e7f51c3840436b982276ec35bf2876cfec2713) |
-| 📦 **Flashable ZIP** | `AK3_marble_MELT_melt_resukisu-v4.1.0-d0f59d06-code34989_susfs-v2.2.0_r5.zip` |
-| 📦 **App** | [Manager releases](https://github.com/ReSukiSU/ReSukiSU) |
+| 🔗 **Commit** | [`88e7f51`](https://github.com/Baka-SU/BakaSU/commit/88e7f51c3840436b982276ec35bf2876cfec2713) |
+| 📦 **Flashable ZIP** | `AK3_marble_MELT_melt_bakasu-v4.1.0-d0f59d06-code34989_susfs-v2.2.0_r5.zip` |
+| 📦 **App** | [Manager releases](https://github.com/Baka-SU/BakaSU) |
 
 </details>
 
@@ -228,7 +228,7 @@ If this build includes **SUSFS**, flash the kernel ZIP **and** install a compati
 |:---|:---|:---:|:---|
 | KernelSU-Next | `AK3_marble_MELT_melt_ksunext-v3.2.0-code33201_susfs-v2.2.0_r5.zip` | *sample* | `…` *(computed at build time)* |
 | SukiSU Ultra | `AK3_marble_MELT_melt_sukisu-v4.1.3-b88403d2-code40813_susfs-v2.2.0_r5.zip` | *sample* | `…` *(computed at build time)* |
-| ReSukiSU | `AK3_marble_MELT_melt_resukisu-v4.1.0-d0f59d06-code34989_susfs-v2.2.0_r5.zip` | *sample* | `…` *(computed at build time)* |
+| BakaSU | `AK3_marble_MELT_melt_bakasu-v4.1.0-d0f59d06-code34989_susfs-v2.2.0_r5.zip` | *sample* | `…` *(computed at build time)* |
 
 Each artifact also carries `build-info.txt`, `build-info.json`, `summary.md`, `zip-audit.txt` and `ccache-stats.txt`.
 
@@ -255,7 +255,7 @@ anykernel3:      dca9dc370838d919d56c1f59ec78b27a14a72c68
 managers:
   kernelsu-next: pershoot/KernelSU-Next@dev-susfs 5a8a604a9078c2fbfb50e2b0cba87b3a6f4da1c2
   sukisu-ultra: SukiSU-Ultra/SukiSU-Ultra@builtin b88403d2561b6e00dff84a3c851e630c62f57fd0
-  resukisu: ReSukiSU/ReSukiSU@main 88e7f51c3840436b982276ec35bf2876cfec2713
+  bakasu: Baka-SU/BakaSU@main 88e7f51c3840436b982276ec35bf2876cfec2713
 ```
 
 🔏 **Provenance** — every ZIP carries an OIDC-backed [artifact attestation](https://github.com/mohdakil2426/marble-kernel-builder/attestations). Verify a download with:
@@ -280,7 +280,7 @@ gh attestation verify <zip> --repo mohdakil2426/marble-kernel-builder
 - 🧵 Free runners: avoid many parallel LOS+LLVM jobs; prefer `lto=thin`
 - 📦 [KernelSU-Next manager app](https://github.com/KernelSU-Next/KernelSU-Next/releases) for the KernelSU-Next ZIP
 - 📦 [SukiSU Ultra manager app](https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases) for the SukiSU Ultra ZIP
-- 📦 [ReSukiSU manager app](https://github.com/ReSukiSU/ReSukiSU) for the ReSukiSU ZIP
+- 📦 [BakaSU manager app](https://github.com/Baka-SU/BakaSU) for the BakaSU ZIP
 - 🛡️ [KSU SUSFS module](https://github.com/sidex15/susfs4ksu-module/releases) matching `v2.2.0`
 
 </details>
@@ -312,7 +312,7 @@ gh attestation verify <zip> --repo mohdakil2426/marble-kernel-builder
 | 📦 **AnyKernel3** | [osm0sis/AnyKernel3](https://github.com/osm0sis/AnyKernel3) |
 | 🔑 **KernelSU-Next** | [`pershoot/KernelSU-Next`](https://github.com/pershoot/KernelSU-Next) |
 | 🔑 **SukiSU Ultra** | [`SukiSU-Ultra/SukiSU-Ultra`](https://github.com/SukiSU-Ultra/SukiSU-Ultra) |
-| 🔑 **ReSukiSU** | [`ReSukiSU/ReSukiSU`](https://github.com/ReSukiSU/ReSukiSU) |
+| 🔑 **BakaSU** | [`Baka-SU/BakaSU`](https://github.com/Baka-SU/BakaSU) |
 | 🛡️ **SUSFS** | [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) |
 
 ---

@@ -52,7 +52,7 @@ expected = {
     "kernelsu": "tiann/KernelSU",
     "kernelsu-next": "KernelSU-Next/KernelSU-Next",
     "sukisu-ultra": "SukiSU-Ultra/SukiSU-Ultra",
-    "resukisu": "ReSukiSU/ReSukiSU",
+    "bakasu": "Baka-SU/BakaSU",
 }
 actual = {name: entry["repo"] for name, entry in managers.items()}
 if actual != expected:
@@ -80,7 +80,7 @@ if SOURCE_REPO=owner/repo SOURCE_REF=main MANAGER=kernelsu-next MANAGER_REF=dev 
   fail "validation accepted official KernelSU-Next dev with SUSFS"
 fi
 expect_validation_success sukisu-ultra true
-expect_validation_success resukisu true
+expect_validation_success bakasu true
 
 if SOURCE_REPO=owner/repo SOURCE_REF=main MANAGER=kernelsu-next ENABLE_SUSFS=true \
    MANAGER_REF=dev-susfs \

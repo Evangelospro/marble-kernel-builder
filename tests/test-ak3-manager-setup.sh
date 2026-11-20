@@ -20,7 +20,7 @@ bin="${tmp_dir}/bin"
 mkdir -p "${ak}" "${bin}" "${tmp_dir}/localtmp" "${tmp_dir}/app/lib/arm64"
 
 # Zip contents
-echo resukisu > "${ak}/marble-manager"
+echo bakasu > "${ak}/marble-manager"
 echo com.resukisu.resukisu > "${ak}/marble-manager-package"
 printf '%s\n' me.weishu.kernelsu com.rifsxd.ksunext com.sukisu.ultra > "${ak}/marble-other-manager-packages"
 echo apk > "${ak}/manager.apk"
@@ -97,7 +97,7 @@ cmp -s "${ak}/ksud" "${adb}/ksud" || fail "A: bundled ksud not installed"
 [[ -x "${adb}/ksud" ]] || fail "A: ksud not executable"
 [[ -x "${hook}" ]] || fail "A: first-boot hook not staged"
 cmp -s "${ak}/manager.apk" "${adb}/marble-pending/manager.apk" || fail "A: APK not staged"
-[[ "$(cat "${adb}/.marble-manager")" == resukisu ]] || fail "A: marker not written"
+[[ "$(cat "${adb}/.marble-manager")" == bakasu ]] || fail "A: marker not written"
 [[ ! -e "${tmp_dir}/pm.log" ]] || fail "A: pm used in recovery"
 
 # ── B: first boot runs the hook ──
@@ -128,8 +128,8 @@ grep -qx com.resukisu.resukisu "${tmp_dir}/installed" || fail "D: app not instal
 # ── E: reflashing the same manager (e.g. a newer build) installs the exact
 #       bundled ksud + app, but does not back up or disable modules ──
 reset_adb
-echo resukisu > "${adb}/.marble-manager"
-echo older-resukisu-ksud > "${adb}/ksud"
+echo bakasu > "${adb}/.marble-manager"
+echo older-bakasu-ksud > "${adb}/ksud"
 printf '%s\n' com.resukisu.resukisu > "${tmp_dir}/installed"
 flash recovery > "${tmp_dir}/outE"
 cmp -s "${ak}/ksud" "${adb}/ksud" || fail "E: older ksud of the same manager not replaced by the exact build"
@@ -149,8 +149,17 @@ flash recovery > "${tmp_dir}/outF"
 [[ ! -e "${adb}/ksud" ]] || fail "F: a ksud was installed without an exact build"
 [[ ! -e "${hook}" ]] || fail "F: hook staged without an app"
 [[ -n "$(find "${adb}/marble-backup" -name ksud)" ]] || fail "F: foreign ksud not moved aside"
-grep -q 'No exact resukisu build bundled' "${tmp_dir}/outF" || fail "F: missing notice"
+grep -q 'No exact bakasu build bundled' "${tmp_dir}/outF" || fail "F: missing notice"
 
 grep -q "will retry next boot" "${tmp_dir}/logC" || fail "C: hook log missing retry note"
+
+# ── G: a marker written under the old name (resukisu) is the same manager ──
+reset_adb
+rm -f "${ak}/ksud"; printf '#!/bin/sh\necho new-ksud\n' > "${ak}/ksud"; echo apk > "${ak}/manager.apk"
+echo resukisu > "${adb}/.marble-manager"
+flash recovery > "${tmp_dir}/outG"
+[[ ! -e "${adb}/marble-backup" ]] || fail "G: old-name marker treated as a manager switch"
+[[ ! -e "${adb}/modules/modA/disable" ]] || fail "G: modules disabled for an old-name marker"
+[[ "$(cat "${adb}/.marble-manager")" == bakasu ]] || fail "G: marker not migrated to the new name"
 
 echo "AK3 manager setup tests passed"

@@ -11,7 +11,7 @@ matrix="$(
   BUILD_SOURCE_LINEAGEOS=true \
   BUILD_KERNELSU_NEXT=true \
   BUILD_SUKISU_ULTRA=true \
-  BUILD_RESUKISU=true \
+  BUILD_BAKASU=true \
   ENABLE_SUSFS=true \
   GITHUB_OUTPUT=/dev/null \
   PYTHON="${PYTHON}" \
@@ -30,13 +30,13 @@ assert [item["kernel_source"] for item in items] == [
     "lineageos", "lineageos", "lineageos",
 ]
 assert [item["manager"] for item in items] == [
-    "kernelsu-next", "sukisu-ultra", "resukisu",
-    "kernelsu-next", "sukisu-ultra", "resukisu",
+    "kernelsu-next", "sukisu-ultra", "bakasu",
+    "kernelsu-next", "sukisu-ultra", "bakasu",
 ]
 assert all(item["enable_susfs"] == "true" for item in items)
 assert [item["label"] for item in items] == [
-    "melt-kernelsu-next-susfs", "melt-sukisu-ultra-susfs", "melt-resukisu-susfs",
-    "lineageos-kernelsu-next-susfs", "lineageos-sukisu-ultra-susfs", "lineageos-resukisu-susfs",
+    "melt-kernelsu-next-susfs", "melt-sukisu-ultra-susfs", "melt-bakasu-susfs",
+    "lineageos-kernelsu-next-susfs", "lineageos-sukisu-ultra-susfs", "lineageos-bakasu-susfs",
 ]
 PY
 

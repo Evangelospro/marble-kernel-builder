@@ -34,7 +34,7 @@ awk '
     code = m[1]
     if (!name) name = m[2]
   }
-  # ReSukiSU prints its REPO_NAME, which changed (ReSukiSU -> BakaSU) and may
+  # BakaSU prints its REPO_NAME, which has changed before (it used to print a different name) and may
   # change again: accept any name.
   /-- [A-Za-z0-9_.-]+ version code:[[:space:]]*[0-9]+/ && !code {
     match($0, /-- [A-Za-z0-9_.-]+ version code:[[:space:]]*([0-9]+)/, m)

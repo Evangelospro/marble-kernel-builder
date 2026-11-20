@@ -42,7 +42,7 @@ case "${MANAGER}" in
   kernelsu)      manager_token="kernelsu" ;;
   kernelsu-next) manager_token="ksunext" ;;
   sukisu-ultra)  manager_token="sukisu" ;;
-  resukisu)      manager_token="resukisu" ;;
+  bakasu)      manager_token="bakasu" ;;
   *)             manager_token="$(sanitize_token "${MANAGER}")" ;;
 esac
 

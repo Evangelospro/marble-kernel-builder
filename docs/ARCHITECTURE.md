@@ -279,7 +279,7 @@ Parallel matrix builds of different managers share the group key only when those
 | `build_source_melt` … `build_source_pa_gr` | boolean | `melt=true` | Select one or more kernel sources |
 | `build_source_all` | boolean | false | Build all 5 kernel sources at once |
 | `source_ref` | string | empty | Override preset branch/tag/commit |
-| `build_none` … `build_resukisu` | boolean | false | Select one or more root managers |
+| `build_none` … `build_bakasu` | boolean | false | Select one or more root managers |
 | `build_scope` | choice | `image-only` | `image-only` · `full` |
 | `toolchain` | choice | `android-r416183b` | Or `llvm-22.1.8` (required for LOS armv9) |
 | `lto` | choice | `thin` | `none` · `thin` · `full` |
@@ -325,7 +325,7 @@ No kernel compile — intentionally cheap.
 
 ```text
 BUILD_NONE, BUILD_KERNELSU, BUILD_KERNELSU_NEXT,
-BUILD_SUKISU_ULTRA, BUILD_RESUKISU, ENABLE_SUSFS
+BUILD_SUKISU_ULTRA, BUILD_BAKASU, ENABLE_SUSFS
 ```
 
 ### Behavior
@@ -559,7 +559,7 @@ Enforced by **`validate-inputs.sh`** and tests. No arbitrary custom manager repo
 | `kernelsu` | `tiann/KernelSU@main` | **Blocked** (no official path) |
 | `kernelsu-next` | `KernelSU-Next/…@dev` | **`pershoot/KernelSU-Next@dev-susfs` only** |
 | `sukisu-ultra` | `@main` | `@builtin` |
-| `resukisu` | `@main` | `@main` (built-in support) |
+| `bakasu` | `@main` | `@main` (built-in support) |
 
 ### 9.2 Manager apply path
 
@@ -723,7 +723,7 @@ AK3_marble_<FAMILY>_<source>_<manager>[-version][-codeN][_susfs-vX.Y.Z]_rN.zip
 | Token | Values |
 |-------|--------|
 | `FAMILY` | `MELT` (`melt`) · `LOS` (lineageos / evolution-x / aosp-pablo / pa-gr) |
-| `manager` | `noroot` · `kernelsu` · `ksunext` · `sukisu` · `resukisu` |
+| `manager` | `noroot` · `kernelsu` · `ksunext` · `sukisu` · `bakasu` |
 | SUSFS off | omit segment |
 | LTO | **not** in zip name (banner + build-info) |
 
@@ -858,7 +858,7 @@ Policy tests run with related env vars **unset** so ambient CI env cannot fake p
 |---------|--------------|------|
 | Matrix setup fails tests | setup | Policy regression or broken workflow pin |
 | “No managers selected” | setup | Enable at least one `build_*` checkbox |
-| SUSFS + kernelsu / none rejected | validate | Use ksunext / sukisu / resukisu |
+| SUSFS + kernelsu / none rejected | validate | Use ksunext / sukisu / bakasu |
 | armv9 / clang-12 errors | compile LOS | Use `toolchain=llvm-22.1.8` |
 | Exit 137 / OOM | link LTO | Prefer `lto=thin`, ensure swap path, avoid `full` on free runners |
 | Exit 143 runner shutdown | free tier load | Avoid many heavy parallel LOS jobs |

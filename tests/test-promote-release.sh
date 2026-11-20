@@ -42,8 +42,8 @@ INFO
 valid_dir="${tmp_dir}/valid"
 make_artifact "${valid_dir}" marble-flash-kernelsu-next-susfs-image-only-r9 kernelsu-next \
   AK3_marble_MELT_melt_ksunext-v3.2.0-code33203_susfs-v2.2.0_r9.zip
-make_artifact "${valid_dir}" marble-flash-resukisu-susfs-image-only-r9 resukisu \
-  AK3_marble_MELT_melt_resukisu-v4.1.0-code34990_susfs-v2.2.0_r9.zip
+make_artifact "${valid_dir}" marble-flash-bakasu-susfs-image-only-r9 bakasu \
+  AK3_marble_MELT_melt_bakasu-v4.1.0-code34990_susfs-v2.2.0_r9.zip
 
 MATRIX_ARTIFACTS_DIR="${valid_dir}" \
 MATRIX_SUMMARY="${tmp_dir}/matrix-summary.md" \
@@ -110,7 +110,7 @@ fi
 duplicate_dir="${tmp_dir}/duplicate"
 duplicate_name=AK3_marble_MELT_melt_ksunext-v3.2.0-code33203_susfs-v2.2.0_r9.zip
 make_artifact "${duplicate_dir}" marble-flash-one-image-only-r9 kernelsu-next "${duplicate_name}"
-make_artifact "${duplicate_dir}" marble-flash-two-image-only-r9 resukisu "${duplicate_name}"
+make_artifact "${duplicate_dir}" marble-flash-two-image-only-r9 bakasu "${duplicate_name}"
 if MATRIX_ARTIFACTS_DIR="${duplicate_dir}" MATRIX_SUMMARY="${tmp_dir}/duplicate.md" \
   RELEASE_ASSETS_FILE="${tmp_dir}/duplicate-assets.txt" BUILD_SCOPE=image-only \
   bash scripts/prepare-promoted-release.sh >/dev/null 2>&1; then

@@ -105,7 +105,7 @@ check_kernel_series() {
 # KernelSU-family kernels inject a *blocking* init step:
 #   on post-fs-data: exec u:r:su:s0 root -- /data/adb/ksud post-fs-data
 # If /data/adb/ksud belongs to another fork (e.g. the ROM's built-in
-# KernelSU-Next while this zip carries ReSukiSU), boot can hang at the logo.
+# KernelSU-Next while this zip carries BakaSU), boot can hang at the logo.
 # So when the manager changes we:
 #   1. move the old /data/adb/ksud + /data/adb/ksu to /data/adb/marble-backup/
 #      and disable modules for the first boot (they were set up by another fork);
@@ -265,6 +265,8 @@ setup_manager() {
 
   marker=$MARBLE_ADB/.marble-manager;
   old_mgr="$(cat $marker 2>/dev/null)";
+  # Same manager under its previous name (ReSukiSU is now BakaSU): not a switch.
+  [ "$old_mgr" = resukisu ] && old_mgr=bakasu;
   switched="";
   if [ "$old_mgr" != "$new_mgr" ] && { [ -e $MARBLE_ADB/ksud ] || [ -d $MARBLE_ADB/ksu ]; }; then
     switched=1;

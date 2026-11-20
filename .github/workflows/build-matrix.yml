@@ -55,14 +55,14 @@ on:
         description: "Manager: SukiSU Ultra"
         type: boolean
         default: false
-      build_resukisu:
-        description: "Manager: ReSukiSU"
+      build_bakasu:
+        description: "Manager: BakaSU"
         type: boolean
         default: false
 
       # ── Configuration & Features ──
       enable_susfs:
-        description: "Enable SUSFS (applies to KSUNext, SukiSU Ultra, ReSukiSU)"
+        description: "Enable SUSFS (applies to KSUNext, SukiSU Ultra, BakaSU)"
         type: boolean
         default: false
       susfs_version:
@@ -165,7 +165,7 @@ jobs:
           KERNEL_SOURCE: ${{ inputs.kernel_source }}
           BUILD_KERNELSU_NEXT: ${{ inputs.build_kernelsu_next }}
           BUILD_SUKISU_ULTRA: ${{ inputs.build_sukisu_ultra }}
-          BUILD_RESUKISU: ${{ inputs.build_resukisu }}
+          BUILD_BAKASU: ${{ inputs.build_bakasu }}
           ENABLE_SUSFS: ${{ inputs.enable_susfs }}
         run: |
           matrix="$(bash scripts/generate-build-matrix.sh)"

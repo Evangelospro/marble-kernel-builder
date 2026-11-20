@@ -45,7 +45,7 @@ manager_flags = [
     ("kernelsu", os.environ.get("BUILD_KERNELSU", "false")),
     ("kernelsu-next", os.environ.get("BUILD_KERNELSU_NEXT", "false")),
     ("sukisu-ultra", os.environ.get("BUILD_SUKISU_ULTRA", "false")),
-    ("resukisu", os.environ.get("BUILD_RESUKISU", "false")),
+    ("bakasu", os.environ.get("BUILD_BAKASU", "false")),
 ]
 
 selected_managers = [m for m, w in manager_flags if w == "true"]
