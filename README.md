@@ -400,6 +400,9 @@ Each step proves one new variable. Verify before moving on.
 > [!CAUTION]
 > **Bootloop recovery** — flash the stock `boot.img` from the **same ROM build** back to the active slot. On A/B devices make sure you target the correct slot (or both). This is why the backup above is not optional.
 
+> [!TIP]
+> **Dry run first.** Copy the zip and rename the copy to end in `-check.zip` (e.g. `AK3_…_r12-check.zip`), then flash it the same way. It runs every check on your phone — kernel series **and commit** vs the boot slot, `/data/adb` access, what would be backed up/moved/disabled, bundled manager app — prints the plan and **writes nothing**. Only if it ends with "All checks passed" flash the original zip.
+
 <details>
 <summary><b>Test a new kernel without flashing it (recommended for a first build on a ROM)</b></summary>
 

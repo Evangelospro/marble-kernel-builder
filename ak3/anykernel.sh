@@ -63,6 +63,47 @@ marble_force_requested() {
   [ -f /tmp/.marble-force-flash ];
 }
 
+# Dry run: rename the zip to end in "-check.zip" to run every check on the
+# phone and print the plan, writing nothing.
+marble_dry_run_requested() {
+  case "$(basename "${ZIPFILE:-x.zip}" .zip)" in
+    *-check) return 0;;
+  esac;
+  [ -f /tmp/.marble-check ];
+}
+
+marble_dry_run_report() {
+  new_mgr="$(cat $AKHOME/marble-manager 2>/dev/null)";
+  ui_print " ";
+  ui_print "DRY RUN (zip name ends in -check): nothing is written.";
+  ui_print "Kernel check: passed.";
+  if [ "$new_mgr" ] && [ "$new_mgr" != none ]; then
+    old_mgr="$(cat $MARBLE_ADB/.marble-manager 2>/dev/null)";
+    [ "$old_mgr" = resukisu ] && old_mgr=bakasu;
+    ui_print "/data/adb: accessible.";
+    ui_print "Root manager now: ${old_mgr:-ROM built-in or none} -> ${new_mgr}";
+    for f in ksud ksu; do
+      [ -e $MARBLE_ADB/$f ] && ui_print "  /data/adb/$f exists";
+    done;
+    if [ "$old_mgr" != "$new_mgr" ] && { [ -e $MARBLE_ADB/ksud ] || [ -d $MARBLE_ADB/ksu ]; }; then
+      n=0;
+      for m in $MARBLE_ADB/modules/*/; do
+        [ -d "$m" ] && [ ! -e "${m}disable" ] && n=$((n + 1));
+      done;
+      ui_print "Would move ksud/ksu to /data/adb/marble-backup/";
+      ui_print "and disable ${n} module(s) for the first boot.";
+    fi;
+    if [ -f $AKHOME/ksud ] && [ -f $AKHOME/manager.apk ]; then
+      ui_print "Would install ${new_mgr} ksud + app $(cat $AKHOME/marble-manager-version 2>/dev/null).";
+    else
+      ui_print "This zip has no ${new_mgr} app/ksud: install them yourself.";
+    fi;
+  fi;
+  ui_print " ";
+  ui_print "All checks passed. Flash the zip under its normal";
+  ui_print "name (without -check) to install.";
+}
+
 # Refuse to flash unless the new Image matches the ROM's kernel: same series
 # (5.10 vs 6.6) AND the same kernel source commit. The ROM's vendor_boot /
 # vendor_dlkm modules are built against exactly that kernel; a different series
@@ -358,6 +399,10 @@ ui_print "Current boot image will be backed up before flashing.";
 dump_boot;
 check_kernel_series;
 precheck_manager_data;
+if marble_dry_run_requested; then
+  marble_dry_run_report;
+  exit 0;
+fi;
 backup_current_boot;
 write_boot;
 setup_manager;
