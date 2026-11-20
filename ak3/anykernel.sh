@@ -101,23 +101,151 @@ check_kernel_series() {
   fi;
 }
 
+# ── Root manager userspace and app (Magisk-style) ───────────────────────────
 # KernelSU-family kernels inject a *blocking* init step:
-#   on post-fs-data: exec ... -- /data/adb/ksud post-fs-data
-# If /data/adb/ksud belongs to a different fork (e.g. the ROM's built-in
-# KernelSU-Next while this zip carries ReSukiSU), it can hang boot at the logo.
-# When the root manager changes, move the old userspace aside (backup kept) and
-# disable modules for the first boot. With no ksud the exec fails instantly and
-# boot continues; opening the new manager app installs its own ksud.
-prepare_manager_userspace() {
+#   on post-fs-data: exec u:r:su:s0 root -- /data/adb/ksud post-fs-data
+# If /data/adb/ksud belongs to another fork (e.g. the ROM's built-in
+# KernelSU-Next while this zip carries ReSukiSU), boot can hang at the logo.
+# So when the manager changes we:
+#   1. move the old /data/adb/ksud + /data/adb/ksu to /data/adb/marble-backup/
+#      and disable modules for the first boot (they were set up by another fork);
+#   2. install this kernel's own ksud (extracted from its official app at build
+#      time), so root works from the first boot;
+#   3. stage the official app plus a one-shot boot-completed.d script: on first
+#      boot the new ksud runs it once Android is up; it installs the app, removes
+#      other KernelSU-family manager apps, runs `ksud install` (what the app does
+#      on first launch) and deletes itself. Works for recovery flashes too.
+# When flashed from a running Android the app is also installed right away.
+
+MARBLE_ADB=/data/adb;
+MARBLE_PENDING=$MARBLE_ADB/marble-pending;
+MARBLE_HOOK=$MARBLE_ADB/boot-completed.d/marble-install-manager.sh;
+
+marble_android_running() {
+  ps -A 2>/dev/null | grep -q '[z]ygote' || ps 2>/dev/null | grep -q '[z]ygote';
+}
+
+# Install the bundled ksud as /data/adb/ksud.
+marble_install_ksud() {
+  [ -f $AKHOME/ksud ] || return 1;
+  cp -f $AKHOME/ksud $MARBLE_ADB/ksud || return 1;
+  chown 0:0 $MARBLE_ADB/ksud 2>/dev/null;
+  chmod 755 $MARBLE_ADB/ksud;
+  # ksu_file is what `ksud install` uses; it only exists once a KernelSU-family
+  # kernel has patched the policy. Otherwise keep the default adb_data_file
+  # label, which the kernel also lets init execute.
+  chcon u:object_r:ksu_file:s0 $MARBLE_ADB/ksud 2>/dev/null;
+  return 0;
+}
+
+# Stage the app and the one-shot first-boot hook.
+marble_stage_first_boot() {
+  pkg="$1";
+  [ -f $AKHOME/manager.apk ] && [ "$pkg" ] || return 1;
+  mkdir -p $MARBLE_PENDING $MARBLE_ADB/boot-completed.d || return 1;
+  cp -f $AKHOME/manager.apk $MARBLE_PENDING/manager.apk || return 1;
+  echo "$pkg" > $MARBLE_PENDING/package;
+  cp -f $AKHOME/marble-other-manager-packages $MARBLE_PENDING/other-packages 2>/dev/null;
+  cat > $MARBLE_HOOK <<'HOOK'
+#!/system/bin/sh
+# One-shot, written by the Marble kernel zip: install the manager app that
+# matches the flashed kernel, remove other KernelSU-family manager apps, finish
+# ksud setup, then delete itself. Log: /data/adb/marble-pending.log
+P=/data/adb/marble-pending
+LOG=/data/adb/marble-pending.log
+exec >>"$LOG" 2>&1
+echo "== $(date) marble first-boot manager setup"
+pkg="$(cat $P/package 2>/dev/null)"
+[ -n "$pkg" ] && [ -f "$P/manager.apk" ] || { echo "nothing staged"; rm -f "$0"; exit 0; }
+i=0
+until [ "$(getprop sys.boot_completed)" = 1 ] && pm path android >/dev/null 2>&1; do
+  i=$((i + 1)); [ $i -gt 120 ] && { echo "package manager not ready"; exit 0; }
+  sleep 1
+done
+tmp=/data/local/tmp/marble-manager.apk
+if ! pm path "$pkg" >/dev/null 2>&1; then
+  cp -f "$P/manager.apk" $tmp && chmod 644 $tmp
+  out="$(pm install -r $tmp 2>&1)"; echo "install: $out"
+  case "$out" in
+    *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*"signatures do not match"*)
+      pm uninstall "$pkg"; out="$(pm install -r $tmp 2>&1)"; echo "reinstall: $out" ;;
+  esac
+  rm -f $tmp
+fi
+if ! pm path "$pkg" >/dev/null 2>&1; then
+  echo "app still missing; will retry next boot"
+  exit 0
+fi
+for other in $(cat $P/other-packages 2>/dev/null); do
+  [ "$other" = "$pkg" ] && continue
+  pm path "$other" >/dev/null 2>&1 && pm uninstall --user 0 "$other" && echo "removed $other"
+done
+# Finish what the app does on first launch (`ksud install`), using the
+# installed app's own ksud and adbroot library.
+libdir="$(dirname "$(pm path "$pkg" | head -n1 | sed 's/^package://')")/lib/arm64"
+if [ -x "$libdir/libksud.so" ]; then
+  if [ -f "$libdir/libadbroot.so" ]; then
+    "$libdir/libksud.so" install --libadbroot "$libdir/libadbroot.so"
+  else
+    "$libdir/libksud.so" install
+  fi
+  echo "ksud install: $?"
+fi
+rm -rf "$P"
+rm -f "$0"
+echo "done"
+HOOK
+  chmod 755 $MARBLE_HOOK;
+  chcon u:object_r:adb_data_file:s0 $MARBLE_HOOK 2>/dev/null;
+  return 0;
+}
+
+# Install the app now (only possible with Android running); remove the other
+# manager apps only once it is in place.
+marble_install_app_now() {
+  pkg="$1";
+  [ -f $AKHOME/manager.apk ] && [ "$pkg" ] || return 1;
+  pm=/system/bin/pm;
+  tmp_apk=/data/local/tmp/marble-manager.apk;
+  cp -f $AKHOME/manager.apk $tmp_apk && chmod 644 $tmp_apk;
+  out="$($pm install -r $tmp_apk 2>&1)";
+  case "$out" in
+    *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*signatures\ do\ not\ match*)
+      ui_print "  existing app has a different signature; replacing it";
+      $pm uninstall $pkg >/dev/null 2>&1;
+      out="$($pm install -r $tmp_apk 2>&1)";;
+  esac;
+  rm -f $tmp_apk;
+  if ! $pm path $pkg >/dev/null 2>&1; then
+    ui_print "  app install failed now: $(echo "$out" | tail -n 1)";
+    return 1;
+  fi;
+  ui_print "  installed $pkg";
+  for other in $(cat $AKHOME/marble-other-manager-packages 2>/dev/null); do
+    [ "$other" != "$pkg" ] || continue;
+    if $pm path $other >/dev/null 2>&1; then
+      # --user 0 also covers a manager bundled as a system app (the ROM's
+      # built-in KernelSU-Next); undo with: pm install-existing <package>
+      if $pm uninstall --user 0 $other >/dev/null 2>&1; then
+        ui_print "  removed other manager app: $other";
+      else
+        ui_print "  could not remove $other; uninstall it manually";
+      fi;
+    fi;
+  done;
+  return 0;
+}
+
+setup_manager() {
   new_mgr="$(cat $AKHOME/marble-manager 2>/dev/null)";
   [ "$new_mgr" ] || return 0;
+  pkg="$(cat $AKHOME/marble-manager-package 2>/dev/null)";
 
-  adb_dir=/data/adb;
   mounted_data="";
-  if [ ! -d $adb_dir ] && ! mountpoint -q /data 2>/dev/null; then
+  if [ ! -d $MARBLE_ADB ] && ! mountpoint -q /data 2>/dev/null; then
     mount /data 2>/dev/null && mounted_data=1;
   fi;
-  if [ ! -d $adb_dir ]; then
+  if [ ! -d $MARBLE_ADB ]; then
     ui_print " ";
     ui_print "Warning: /data/adb is not accessible here.";
     if [ "$new_mgr" != none ]; then
@@ -130,19 +258,21 @@ prepare_manager_userspace() {
     return 0;
   fi;
 
-  marker=$adb_dir/.marble-manager;
+  marker=$MARBLE_ADB/.marble-manager;
   old_mgr="$(cat $marker 2>/dev/null)";
-  if [ "$old_mgr" != "$new_mgr" ] && { [ -e $adb_dir/ksud ] || [ -d $adb_dir/ksu ]; }; then
+  switched="";
+  if [ "$old_mgr" != "$new_mgr" ] && { [ -e $MARBLE_ADB/ksud ] || [ -d $MARBLE_ADB/ksu ]; }; then
+    switched=1;
     stamp="$(date +%Y%m%d-%H%M%S 2>/dev/null || date +%s)";
-    bak=$adb_dir/marble-backup/${stamp}-from-${old_mgr:-rom-builtin};
+    bak=$MARBLE_ADB/marble-backup/${stamp}-from-${old_mgr:-rom-builtin};
     mkdir -p $bak;
     ui_print " ";
     ui_print "Root manager change: ${old_mgr:-ROM built-in} -> ${new_mgr}";
     for f in ksud ksu; do
-      [ -e $adb_dir/$f ] && mv -f $adb_dir/$f $bak/ && ui_print "  moved /data/adb/$f to backup";
+      [ -e $MARBLE_ADB/$f ] && mv -f $MARBLE_ADB/$f $bak/ && ui_print "  moved /data/adb/$f to backup";
     done;
-    if [ "$new_mgr" != none ] && [ -d $adb_dir/modules ]; then
-      for m in $adb_dir/modules/*/; do
+    if [ "$new_mgr" != none ] && [ -d $MARBLE_ADB/modules ]; then
+      for m in $MARBLE_ADB/modules/*/; do
         [ -d "$m" ] || continue;
         if [ ! -e "${m}disable" ]; then
           touch "${m}disable" && basename "$m" >> $bak/disabled-modules.txt;
@@ -151,82 +281,34 @@ prepare_manager_userspace() {
       [ -s $bak/disabled-modules.txt ] && ui_print "  disabled $(wc -l < $bak/disabled-modules.txt) module(s) for the first boot";
     fi;
     ui_print "  backup: $bak";
-    if [ "$new_mgr" != none ]; then
-      ui_print "After boot, open the ${new_mgr} manager app once";
-      ui_print "to install its ksud, then re-enable modules.";
-    fi;
   fi;
   echo "$new_mgr" > $marker;
-  [ "$mounted_data" ] && umount /data 2>/dev/null;
-  return 0;
-}
 
-# Install this kernel's official manager app and remove other KernelSU-family
-# manager apps (they can't manage this kernel and confuse multi-manager
-# detection). Needs a running Android (Kernel Flasher etc.): recovery has no
-# package manager, so there the APK is only copied next to the boot backup.
-manage_manager_apps() {
-  new_mgr="$(cat $AKHOME/marble-manager 2>/dev/null)";
-  [ "$new_mgr" ] && [ "$new_mgr" != none ] || return 0;
-  apk=$AKHOME/manager.apk;
-  pkg="$(cat $AKHOME/marble-manager-package 2>/dev/null)";
-
-  if ! ps -A 2>/dev/null | grep -q '[z]ygote' && ! ps 2>/dev/null | grep -q '[z]ygote'; then
-    ui_print " ";
-    if [ -f "$apk" ] && [ -d /sdcard/marble-kernel-backup ]; then
-      cp -f $apk /sdcard/marble-kernel-backup/${new_mgr}-manager.apk 2>/dev/null &&
-        ui_print "Manager app saved: /sdcard/marble-kernel-backup/${new_mgr}-manager.apk";
-    fi;
-    ui_print "Flashed from recovery: install the ${new_mgr} app and";
-    ui_print "uninstall other KernelSU managers after booting.";
-    return 0;
-  fi;
-
-  pm=/system/bin/pm;
-  installed=0;
-  if [ -f "$apk" ] && [ "$pkg" ]; then
-    ui_print " ";
-    ui_print "Installing ${new_mgr} manager app (${pkg})...";
-    tmp_apk=/data/local/tmp/marble-${new_mgr}-manager.apk;
-    cp -f $apk $tmp_apk && chmod 644 $tmp_apk;
-    out="$($pm install -r $tmp_apk 2>&1)";
-    case "$out" in
-      *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*signatures\ do\ not\ match*)
-        # Same package installed with another signing key (e.g. a fork build):
-        # it can't be updated in place, so replace it.
-        ui_print "  existing app has a different signature; replacing it";
-        $pm uninstall $pkg >/dev/null 2>&1;
-        out="$($pm install -r $tmp_apk 2>&1)";;
-    esac;
-    rm -f $tmp_apk;
-    if $pm path $pkg >/dev/null 2>&1 && echo "$out" | grep -q Success; then
-      installed=1;
-      ui_print "  installed";
-    else
-      ui_print "  install failed: $(echo "$out" | tail -n 1)";
-      ui_print "  install the ${new_mgr} app manually.";
-    fi;
-  elif [ "$pkg" ] && $pm path $pkg >/dev/null 2>&1; then
-    installed=1;
-  else
-    ui_print " ";
-    ui_print "No manager app bundled: install the ${new_mgr} app manually.";
-  fi;
-
-  # Only remove the old managers once the new one is in place.
-  [ "$installed" = 1 ] || return 0;
-  for other in $(cat $AKHOME/marble-other-manager-packages 2>/dev/null); do
-    [ "$other" != "$pkg" ] || continue;
-    if $pm path $other >/dev/null 2>&1; then
-      # --user 0 also works for a manager bundled as a system app (the ROM's
-      # built-in KernelSU-Next); restore with: pm install-existing <package>
-      if $pm uninstall --user 0 $other >/dev/null 2>&1; then
-        ui_print "Removed other manager app: $other";
+  if [ "$new_mgr" != none ]; then
+    ksud_fresh="";
+    if [ ! -e $MARBLE_ADB/ksud ]; then
+      if marble_install_ksud; then
+        ksud_fresh=1;
+        ui_print "Installed ${new_mgr} ksud (root works from first boot)";
       else
-        ui_print "Could not remove $other; uninstall it manually.";
+        ui_print "No ${new_mgr} ksud bundled: open the ${new_mgr} app after boot.";
       fi;
     fi;
-  done;
+    if [ "$switched" ] || [ "$ksud_fresh" ] || [ -d $MARBLE_PENDING ]; then
+      if [ "$ksud_fresh" ] || [ -e $MARBLE_ADB/ksud ]; then
+        marble_stage_first_boot "$pkg" &&
+          ui_print "First boot will install the ${new_mgr} app and remove other managers.";
+      fi;
+      if marble_android_running && [ -f $AKHOME/manager.apk ]; then
+        ui_print "Installing ${new_mgr} manager app now...";
+        marble_install_app_now "$pkg";
+      fi;
+    fi;
+    [ "$switched" ] && [ -s "$bak/disabled-modules.txt" ] &&
+      ui_print "Re-enable your modules in the ${new_mgr} app after booting.";
+  fi;
+
+  [ "$mounted_data" ] && umount /data 2>/dev/null;
   return 0;
 }
 
@@ -238,5 +320,4 @@ dump_boot;
 check_kernel_series;
 backup_current_boot;
 write_boot;
-prepare_manager_userspace;
-manage_manager_apps;
+setup_manager;

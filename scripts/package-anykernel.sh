@@ -157,6 +157,17 @@ cp "${image_path}" "${work_dir}/ak3/Image"
 if [[ -s "${release_dir}/manager.apk" && -s "${release_dir}/manager-apk.env" ]]; then
   cp "${release_dir}/manager.apk" "${work_dir}/ak3/manager.apk"
   sed -n 's/^manager_package=//p' "${release_dir}/manager-apk.env" > "${work_dir}/ak3/marble-manager-package"
+  # The manager's own ksud (shipped in the APK as a native library). The zip
+  # installs it as /data/adb/ksud so the new kernel never runs another fork's
+  # ksud and root works from the first boot.
+  if unzip -p "${release_dir}/manager.apk" lib/arm64-v8a/libksud.so > "${work_dir}/ak3/ksud" 2>/dev/null &&
+     [[ -s "${work_dir}/ak3/ksud" ]] &&
+     file -b "${work_dir}/ak3/ksud" | grep -q 'ELF 64-bit.*aarch64'; then
+    echo "Bundled ksud from $(sed -n 's/^manager_apk_name=//p' "${release_dir}/manager-apk.env")"
+  else
+    echo "::warning::No arm64 ksud in the manager APK; the zip will not pre-install ksud"
+    rm -f "${work_dir}/ak3/ksud"
+  fi
 fi
 if [[ "${MANAGER}" != "none" ]]; then
   jq -r --arg m "${MANAGER}" 'to_entries[] | select(.key != $m) | .value.package // empty' \
