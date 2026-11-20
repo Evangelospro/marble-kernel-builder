@@ -271,20 +271,23 @@ run=$(( $(cat "${run_file}" 2>/dev/null || echo 0) + 1 ))
 echo "${run}" > "${run_file}"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
-# Scripts hand values to later steps through GITHUB_ENV (as in Actions).
-load_env() {
-  local line
-  [[ -s "${GITHUB_ENV}" ]] || return 0
-  while IFS= read -r line; do
-    [[ "${line}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] && export "${line?}"
-  done < "${GITHUB_ENV}"
+# Steps leave their results in release/*.env (shell-quoted); load them so the
+# next step sees e.g. the ROM kernel's commit and the resolved toolchain.
+load_state() {
+  local f
+  set -a
+  for f in release/kernel-source.env release/toolchain.env; do
+    # shellcheck disable=SC1090
+    [[ -s "${f}" ]] && source "${f}"
+  done
+  set +a
 }
 step() { # name, command...
   local name="$1"; shift
   echo
   echo "━━ ${name}"
   "$@"
-  load_env
+  load_state
 }
 
 setup_toolchain() {
@@ -402,8 +405,8 @@ build_one() {
   for d in ak3 config patches rom-profiles scripts tools; do ln -s "${REPO}/${d}" "${work}/${d}"; done
   cd "${work}"
 
-  export GITHUB_ENV="${work}/.github-env" GITHUB_OUTPUT="${work}/.github-output" GITHUB_RUN_NUMBER="${run}"
-  : > "${GITHUB_ENV}"; : > "${GITHUB_OUTPUT}"
+  unset GITHUB_ENV GITHUB_OUTPUT
+  export BUILD_NUMBER="${run}"
   export KERNEL_SOURCE="${source}" SOURCE_REF="${SOURCE_REF}" MANAGER="${manager}" MANAGER_REF="${MANAGER_REF}"
   export ENABLE_SUSFS="${susfs}" SUSFS_VERSION="${SUSFS_VERSION}" SUSFS_KERNEL_BRANCH=gki-android12-5.10
   export SUSFS_REF="${SUSFS_REF}" SUSFS_EXPECTED_VERSION="" BUILD_SCOPE="${SCOPE}" KERNEL_DIR=kernel-source
