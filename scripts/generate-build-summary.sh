@@ -114,6 +114,30 @@ fi
 device_badge_url="https://img.shields.io/badge/Poco_F5_%2F_Note_12_Turbo-marble_%7C_marblein-EF5350?style=for-the-badge"
 build_badge_url="https://img.shields.io/badge/Build-Passing-2088FF?style=for-the-badge&logo=githubactions&logoColor=white"
 
+# ── Target-ROM verification (verify-rom-compat.sh) ─────────────────────────────
+rom_compat="${release_dir}/rom-compat.txt"
+rom_block() {
+  [[ -s "${rom_compat}" ]] || return 0
+  local target result
+  target="$(sed -n 's/^rom_target=//p' "${rom_compat}" | head -n1)"
+  result="$(sed -n 's/^RESULT: //p' "${rom_compat}" | head -n1)"
+  echo
+  if [[ "${result}" == compatible* ]]; then
+    echo "> [!TIP]"
+    echo "> **Verified against \`${target}\`:** every kernel module of that ROM loads on this kernel (same kernel commit and config, identical symbol CRCs and struct layout). Flash it only on that ROM build."
+  else
+    echo "> [!WARNING]"
+    echo "> **Not verified against your ROM** (${target:-none}). Check the ROM's kernel version and commit before flashing."
+  fi
+  echo
+  echo '<details><summary>ROM compatibility report</summary>'
+  echo
+  echo '```text'
+  grep -v '^  ' "${rom_compat}" || true
+  echo '```'
+  echo '</details>'
+}
+
 # ── Write summary ─────────────────────────────────────────────────────────────
 {
   # ── Centered header with badges ──────────────────────────────────────────
@@ -133,6 +157,7 @@ build_badge_url="https://img.shields.io/badge/Build-Passing-2088FF?style=for-the
   echo "🕐 **${build_date}** &nbsp;·&nbsp; 🔢 **Run #${run_number:-${build_id}}** &nbsp;·&nbsp; 🔗 **[View Workflow](${workflow_run})**"
   echo
   echo '</div>'
+  rom_block
   echo
   echo "---"
   echo

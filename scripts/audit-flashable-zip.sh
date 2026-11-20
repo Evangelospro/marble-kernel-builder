@@ -44,6 +44,16 @@ for entry in "${required_entries[@]}"; do
   fi
 done
 
+# A zip that installs a manager app must carry that app and its ksud.
+if grep -Fxq "marble-manager-package" "${zip_listing}"; then
+  for entry in manager.apk ksud marble-manager-version marble-other-manager-packages; do
+    if ! grep -Fxq "${entry}" "${zip_listing}"; then
+      echo "::error::Zip installs a manager app but is missing ${entry}"
+      missing=1
+    fi
+  done
+fi
+
 if grep -Fxq "README.md" "${zip_listing}"; then
   echo "::error::README.md should not be included in flashable zip"
   missing=1

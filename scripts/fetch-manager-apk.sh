@@ -25,9 +25,20 @@ fi
 source "${RESOLVED_REFS_FILE}"
 package="$(jq -r --arg m "${MANAGER}" '.[$m].package // empty' config/managers.json)"
 
-if [[ -z "${manager_apk_artifact_id:-}" ]]; then
-  echo "::warning::No exact official ${MANAGER} app build for ${manager_commit:-?}; the zip will not bundle the app or ksud"
+# For managers with official per-commit builds the exact app + ksud are
+# required: a zip without them would leave the phone with another fork's ksud
+# or no root at all.
+no_app() {
+  if [[ "${manager_apk_expected:-0}" == 1 ]]; then
+    echo "::error::$1"
+    exit 1
+  fi
+  echo "::warning::$1"
   exit 0
+}
+
+if [[ -z "${manager_apk_artifact_id:-}" ]]; then
+  no_app "No exact official ${MANAGER} app build for ${manager_commit:-?}; the zip would not include the app or ksud"
 fi
 
 work="$(mktemp -d)"
@@ -42,9 +53,7 @@ else
     "https://api.github.com/repos/${manager_apk_repo}/actions/artifacts/${manager_apk_artifact_id}/zip" -o "${work}/artifact.zip" || download_ok=0
 fi
 if (( ! download_ok )) || ! unzip -q -o "${work}/artifact.zip" -d "${work}/artifact"; then
-  # Bundling nothing is safe; a mismatched app is not. Don't fail the kernel build.
-  echo "::warning::Could not download ${manager_apk_repo} artifact ${manager_apk_artifact_id}; the zip will not bundle the app or ksud"
-  exit 0
+  no_app "Could not download ${manager_apk_repo} artifact ${manager_apk_artifact_id}; the zip would not include the app or ksud"
 fi
 
 kernel_code="${manager_build_version_code:-}"

@@ -14,6 +14,11 @@ on:
         required: false
         type: string
         default: ""
+      rom_url:
+        description: "ROM zip to verify against (empty = preset's official latest, none = skip)"
+        required: false
+        type: string
+        default: ""
       manager:
         required: true
         type: string
@@ -109,9 +114,26 @@ jobs:
               bash "${test_script}"
           done
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential ccache cpio curl dwarves flex git jq kmod libelf-dev \
+            libncurses-dev libssl-dev lld llvm clang file python3 python-is-python3 \
+            rsync unzip zip zstd lz4 e2fsprogs erofs-utils
+
       - name: Resolve kernel source preset
         id: kernel-source
         run: bash scripts/resolve-kernel-source.sh
+
+      # Pick the ROM build this kernel must match (official latest by default),
+      # fetch its kernel/modules, and build its exact kernel commit unless
+      # source_ref is set. verify-rom-compat.sh checks the result after build.
+      - name: Resolve target ROM
+        env:
+          ROM_URL: ${{ inputs.rom_url }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: bash scripts/resolve-target-rom.sh
 
       - name: Resolve toolchain
         run: bash scripts/resolve-toolchain.sh
@@ -122,8 +144,9 @@ jobs:
       - name: Checkout kernel source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          repository: ${{ steps.kernel-source.outputs.source_repo }}
-          ref: ${{ steps.kernel-source.outputs.source_ref }}
+          # From GITHUB_ENV: "Resolve target ROM" may pin the ROM's exact commit.
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ env.SOURCE_REF }}
           path: kernel-source
           fetch-depth: 1
           persist-credentials: false
@@ -185,14 +208,6 @@ jobs:
           sudo mkswap "${swap_file}" >/dev/null
           sudo swapon "${swap_file}"
           echo "After:"; free -h; swapon --show
-
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            bc bison build-essential ccache cpio curl dwarves flex git jq kmod libelf-dev \
-            libncurses-dev libssl-dev lld llvm clang file python3 python-is-python3 \
-            rsync unzip zip zstd
 
       - name: Restore Android kernel clang
         if: ${{ env.TOOLCHAIN == 'android-r416183b' }}
@@ -383,6 +398,11 @@ jobs:
       - name: Build kernel
         run: bash scripts/build-kernel.sh
 
+      # Fails (no zip) unless every module of the target ROM can load on this
+      # kernel: same series/commit, config, struct module, exported CRCs.
+      - name: Verify against target ROM
+        run: bash scripts/verify-rom-compat.sh
+
       - name: Read manager build metadata
         run: bash scripts/read-manager-build-metadata.sh
 
@@ -468,6 +488,7 @@ jobs:
             kernel-source/release/build-info.json
             kernel-source/release/summary.md
             kernel-source/release/zip-audit.txt
+            kernel-source/release/rom-compat.txt
             kernel-source/release/ccache-stats.txt
             kernel-source/release/zip-name.env
 

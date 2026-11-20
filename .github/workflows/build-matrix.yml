@@ -78,8 +78,12 @@ on:
         description: "SUSFS branch/tag/commit (only for custom version)"
         required: false
         default: ""
+      rom_url:
+        description: "ROM zip URL to verify against (empty = official latest for the source, none = skip)"
+        required: false
+        default: ""
       source_ref:
-        description: "Override branch/tag/commit (empty = each repo's default branch)"
+        description: "Kernel branch/tag/commit (empty = the target ROM's exact kernel commit, else the repo default branch)"
         required: false
         default: ""
       build_scope:
@@ -184,6 +188,7 @@ jobs:
     with:
       kernel_source: ${{ matrix.kernel_source }}
       source_ref: ${{ inputs.source_ref }}
+      rom_url: ${{ inputs.rom_url }}
       manager: ${{ matrix.manager }}
       manager_ref: ""
       enable_susfs: ${{ fromJSON(matrix.enable_susfs) }}

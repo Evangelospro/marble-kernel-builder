@@ -14,9 +14,12 @@ MANAGER_REPO="${MANAGER_REPO:-}"
 MANAGER_REF="${MANAGER_REF:-}"
 MANAGER_COMMIT="${MANAGER_COMMIT:-}"
 
+# manager_apk_expected=1: this manager has official per-commit app builds, so
+# a zip without its exact app/ksud is a failed build (fetch-manager-apk.sh).
+expected=0
 emit() {
-  printf 'manager_apk_repo=%q\nmanager_apk_artifact_id=%q\nmanager_apk_run_id=%q\nmanager_apk_commit=%q\n' \
-    "${1:-}" "${2:-}" "${3:-}" "${4:-}"
+  printf 'manager_apk_repo=%q\nmanager_apk_artifact_id=%q\nmanager_apk_run_id=%q\nmanager_apk_commit=%q\nmanager_apk_expected=%q\n' \
+    "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${expected}"
 }
 
 build_repo="$(jq -r --arg m "${MANAGER}" '.[$m].apk_build.repo // empty' config/managers.json)"
@@ -33,6 +36,8 @@ if [[ "${MANAGER_REPO,,}" != "${main_repo,,}" && "${MANAGER_REPO,,}" != "${build
   echo "::warning::${MANAGER_REPO} is a fork without official-signed app builds; the zip will not bundle the app or ksud (install the matching app yourself)" >&2
   emit; exit 0
 fi
+
+expected=1
 
 api_get() {
   if command -v gh >/dev/null 2>&1 && [[ -n "${GH_TOKEN:-}" ]]; then

@@ -46,59 +46,69 @@ backup_current_boot() {
   ui_print "  ${backup_img}";
 }
 
-# Print "X.Y" from the first "Linux version X.Y.Z" banner in a raw kernel image.
-kernel_major_minor() {
+# "X.Y.Z-..." release from the "Linux version <release> (" banner of a raw
+# kernel image or of `uname -r`-style text.
+banner_release() {
   [ -f "$1" ] || return 0;
-  strings "$1" 2>/dev/null | sed -n 's/^.*Linux version \([0-9][0-9]*\.[0-9][0-9]*\)[.-].*$/\1/p' | head -n 1;
+  strings "$1" 2>/dev/null | sed -n 's/^.*Linux version \([0-9][0-9]*\.[0-9][0-9]*[^ ]*\) (.*$/\1/p' | head -n 1;
+}
+release_series() { echo "$1" | sed -n 's/^\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p'; }
+# 12-hex kernel source commit from a release like 5.10.269-gki-g658b84f13496(-dirty)
+release_commit() { echo "$1" | sed -n 's/^.*-g\([0-9a-f]\{12\}\).*$/\1/p'; }
+
+marble_force_requested() {
+  case "$(basename "${ZIPFILE:-x.zip}" .zip)" in
+    *-force) return 0;;
+  esac;
+  [ -f /tmp/.marble-force-flash ];
 }
 
-# Refuse to flash an Image whose kernel series differs from the ROM's kernel
-# (e.g. a 5.10 Image on an Evolution X 6.6 build). The ROM's vendor_dlkm,
-# vendor_boot and system_dlkm modules are built for its own kernel, so a
-# mismatched Image cannot load them and the phone bootloops.
+# Refuse to flash unless the new Image matches the ROM's kernel: same series
+# (5.10 vs 6.6) AND the same kernel source commit. The ROM's vendor_boot /
+# vendor_dlkm modules are built against exactly that kernel; a different series
+# or commit can make them fail to load, and the phone bootloops. Anything that
+# cannot be verified also stops the flash. Override (e.g. to repair a slot that
+# already holds a wrong kernel): rename the zip to end in "-force.zip".
 check_kernel_series() {
-  new_ver="$(kernel_major_minor "$AKHOME/Image")";
-  cur_ver="";
-  for k in $SPLITIMG/kernel; do
-    cur_ver="$(kernel_major_minor "$k")";
-    [ "$cur_ver" ] && break;
-  done;
+  new_rel="$(banner_release "$AKHOME/Image")";
+  cur_rel="$(banner_release "$SPLITIMG/kernel")";
   cur_src="boot image";
-  if [ -z "$cur_ver" ]; then
-    cur_ver="$(uname -r 2>/dev/null | sed -n 's/^\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p')";
+  if [ -z "$cur_rel" ]; then
+    cur_rel="$(uname -r 2>/dev/null)";
     cur_src="running kernel";
   fi;
+  new_ver="$(release_series "$new_rel")"; cur_ver="$(release_series "$cur_rel")";
+  new_sha="$(release_commit "$new_rel")"; cur_sha="$(release_commit "$cur_rel")";
 
   ui_print " ";
-  ui_print "New kernel     : ${new_ver:-unknown}";
-  ui_print "Current kernel : ${cur_ver:-unknown} (${cur_src})";
+  ui_print "New kernel     : ${new_rel:-unknown}";
+  ui_print "Current kernel : ${cur_rel:-unknown} (${cur_src})";
+
+  problem="";
   if [ -z "$new_ver" ] || [ -z "$cur_ver" ]; then
-    ui_print "Warning: could not compare kernel versions.";
-    ui_print "Make sure this zip matches your ROM's kernel version!";
+    problem="could not read both kernel versions";
+  elif [ "$new_ver" != "$cur_ver" ]; then
+    problem="kernel ${new_ver} in this zip, but the ROM runs ${cur_ver}";
+  elif [ -z "$new_sha" ] || [ -z "$cur_sha" ]; then
+    problem="could not read both kernel source commits";
+  elif [ "$new_sha" != "$cur_sha" ]; then
+    problem="built from kernel commit ${new_sha}, but the ROM's kernel is ${cur_sha}";
+  fi;
+  [ "$problem" ] || { ui_print "Kernel matches the ROM (${new_ver}, commit ${new_sha})."; return 0; };
+
+  if marble_force_requested; then
+    ui_print "WARNING: ${problem}.";
+    ui_print "Continuing only because force flash was requested.";
     return 0;
   fi;
-  if [ "$new_ver" != "$cur_ver" ]; then
-    # Escape hatch, e.g. recovering a slot that already holds a wrong-series
-    # kernel: rename the zip to end in "-force.zip" or create
-    # /tmp/.marble-force-flash before flashing.
-    case "$(basename "${ZIPFILE:-x.zip}" .zip)" in
-      *-force) force_flash=1;;
-    esac;
-    [ -f /tmp/.marble-force-flash ] && force_flash=1;
-    if [ "$force_flash" ]; then
-      ui_print "Kernel version mismatch (${new_ver} vs ${cur_ver}) ignored: force flash requested.";
-      return 0;
-    fi;
-    ui_print " ";
-    ui_print "This zip has a ${new_ver} kernel, but your ROM";
-    ui_print "runs a ${cur_ver} kernel. Its modules can't load";
-    ui_print "on ${new_ver}, so flashing would bootloop.";
-    ui_print "Build from the kernel branch your ROM uses";
-    ui_print "(e.g. Evolution X 6.6 = evolution-x, default branch).";
-    ui_print "If the boot slot already holds a wrong kernel,";
-    ui_print "rename this zip to end in -force.zip to override.";
-    abort "Kernel version mismatch. Nothing was flashed.";
-  fi;
+  ui_print " ";
+  ui_print "STOP: ${problem}.";
+  ui_print "The ROM's kernel modules are built for its own";
+  ui_print "kernel; a mismatch can bootloop the phone.";
+  ui_print "Rebuild with source_ref=${cur_sha:-<your ROM's kernel commit>}.";
+  ui_print "Only if you know the boot slot holds a wrong";
+  ui_print "kernel: rename this zip to end in -force.zip.";
+  abort "Kernel does not match the ROM. Nothing was flashed.";
 }
 
 # ── Root manager userspace and app (Magisk-style) ───────────────────────────
@@ -134,7 +144,8 @@ marble_install_ksud() {
   # ksu_file is what `ksud install` uses; it only exists once a KernelSU-family
   # kernel has patched the policy. Otherwise keep the default adb_data_file
   # label, which the kernel also lets init execute.
-  chcon u:object_r:ksu_file:s0 $MARBLE_ADB/ksud 2>/dev/null;
+  chcon u:object_r:ksu_file:s0 $MARBLE_ADB/ksud 2>/dev/null ||
+    chcon u:object_r:adb_data_file:s0 $MARBLE_ADB/ksud 2>/dev/null;
   return 0;
 }
 
@@ -241,6 +252,31 @@ marble_install_app_now() {
   return 0;
 }
 
+# Before anything is written: a root-manager kernel must be able to fix up
+# /data/adb (retire another fork's ksud, install its own), or the first boot
+# can hang at the logo. Stop here if /data is not accessible.
+precheck_manager_data() {
+  new_mgr="$(cat $AKHOME/marble-manager 2>/dev/null)";
+  [ "$new_mgr" ] && [ "$new_mgr" != none ] || return 0;
+  [ -d $MARBLE_ADB ] && return 0;
+  if ! mountpoint -q /data 2>/dev/null && mount /data 2>/dev/null; then
+    adb_ok="";
+    [ -d $MARBLE_ADB ] && adb_ok=1;
+    umount /data 2>/dev/null;
+    [ "$adb_ok" ] && return 0;
+  fi;
+  if marble_force_requested; then
+    ui_print "WARNING: /data/adb not accessible; continuing (force flash).";
+    return 0;
+  fi;
+  ui_print " ";
+  ui_print "STOP: /data/adb is not accessible here, so the";
+  ui_print "previous root manager's ksud cannot be replaced";
+  ui_print "and the first boot could hang at the logo.";
+  ui_print "Flash from Android (e.g. Kernel Flasher) instead.";
+  abort "Cannot prepare /data/adb. Nothing was flashed.";
+}
+
 setup_manager() {
   new_mgr="$(cat $AKHOME/marble-manager 2>/dev/null)";
   [ "$new_mgr" ] || return 0;
@@ -321,6 +357,7 @@ ui_print "Current boot image will be backed up before flashing.";
 
 dump_boot;
 check_kernel_series;
+precheck_manager_data;
 backup_current_boot;
 write_boot;
 setup_manager;

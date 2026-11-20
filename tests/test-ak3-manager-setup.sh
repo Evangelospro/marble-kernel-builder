@@ -162,4 +162,18 @@ flash recovery > "${tmp_dir}/outG"
 [[ ! -e "${adb}/modules/modA/disable" ]] || fail "G: modules disabled for an old-name marker"
 [[ "$(cat "${adb}/.marble-manager")" == bakasu ]] || fail "G: marker not migrated to the new name"
 
+# ── H: /data/adb unreachable (e.g. recovery without /data) -> stop before writing ──
+pre() { # zipname
+  sh -c "ui_print() { :; }; abort() { exit 9; }; mountpoint() { return 1; }; mount() { return 1; }
+    AKHOME='${ak}'; ZIPFILE='/sdcard/$1'
+    marble_force_requested() { case \"\$(basename \"\${ZIPFILE}\" .zip)\" in *-force) return 0;; esac; return 1; }
+    . '${tmp_dir}/fn.sh'; MARBLE_ADB='${tmp_dir}/no-such-data/adb'; precheck_manager_data"
+}
+rc=0; pre k.zip || rc=$?
+[[ ${rc} -eq 9 ]] || fail "H: flash must stop when /data/adb is not accessible (rc=${rc})"
+pre k-force.zip || fail "H: force flash must continue"
+rc=0
+sh -c "ui_print() { :; }; abort() { exit 9; }; AKHOME='${ak}'; . '${tmp_dir}/fn.sh'; MARBLE_ADB='${adb}'; precheck_manager_data" || rc=$?
+[[ ${rc} -eq 0 ]] || fail "H: accessible /data/adb must pass the precheck"
+
 echo "AK3 manager setup tests passed"

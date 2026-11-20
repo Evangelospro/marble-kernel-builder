@@ -42,6 +42,7 @@
     "display": "Evolution-X",
     "author": "Evolution-X",
     "repo": "Evolution-X-Devices/kernel_xiaomi_sm8450",
+    "rom_ota": "https://raw.githubusercontent.com/Evolution-X/OTA/cnb/builds/marble.json",
     "rom_label": "Evolution-X",
     "rom_family": "los",
     "rom_support": "Evolution X only (kernel 6.6 on the default branch; 5.10 via source_ref=cnb)",

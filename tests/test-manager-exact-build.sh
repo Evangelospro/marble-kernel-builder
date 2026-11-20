@@ -58,19 +58,23 @@ eval "${out}"
 [[ "${manager_apk_artifact_id}" == 20 ]] || fail "should skip the expired newest build and pick artifact 20 (got: ${out})"
 [[ "${manager_apk_commit}" == bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb ]] || fail "kernel must use the commit of the official build"
 [[ "${manager_apk_repo}" == Baka-SU/BakaSU ]] || fail "official build repo"
+[[ "${manager_apk_expected}" == 1 ]] || fail "BakaSU must require its exact app build"
 
 eval "$(resolve kernelsu-next pershoot/KernelSU-Next dev-susfs)"
 [[ -z "${manager_apk_artifact_id}" ]] || fail "a SUSFS fork must not get an official app"
+[[ "${manager_apk_expected}" == 0 ]] || fail "a SUSFS fork must not require an app build"
 eval "$(resolve sukisu-ultra SukiSU-Ultra/SukiSU-Ultra builtin)"
 [[ -z "${manager_apk_artifact_id}" ]] || fail "managers without a known official build must bundle nothing"
+[[ "${manager_apk_expected}" == 0 ]] || fail "managers without a known official build must not require one"
 
 # ── fetch: matching version code is accepted ──
-fetch() { # kernel_version_code
+fetch() { # kernel_version_code [manager_apk_expected]
   cat > "${work}/release/resolved-refs.env" <<EOF
 manager_commit=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 manager_apk_repo=Baka-SU/BakaSU
 manager_apk_artifact_id=20
 manager_apk_run_id=2
+manager_apk_expected=${2:-1}
 manager_build_version_code=$1
 EOF
   (cd "${work}" && PATH="${tmp_dir}/bin:${PATH}" GH_TOKEN=x MANAGER=bakasu KERNEL_DIR=k bash scripts/fetch-manager-apk.sh)
@@ -88,8 +92,13 @@ grep -q 'not the same build' "${tmp_dir}/fetch-bad.log" || fail "mismatch not ex
 
 # ── fetch: download failure bundles nothing but does not fail the build ──
 sed -i 's|^  \*/actions/artifacts/20/zip) cat .*|  */actions/artifacts/20/zip) echo "HTTP 403" >\&2; exit 1 ;;|' "${tmp_dir}/bin/gh"
-fetch 220 > "${tmp_dir}/fetch-403.log" 2>&1 || fail "download failure must not fail the build"
+# Exact build expected (BakaSU): a zip without its app/ksud is a failed build.
+if fetch 220 1 > "${tmp_dir}/fetch-403.log" 2>&1; then
+  fail "download failure must fail the build when an exact app build is expected"
+fi
 grep -q 'Could not download' "${tmp_dir}/fetch-403.log" || fail "download failure not reported"
+# No exact build expected (e.g. a SUSFS fork): warn and build without the app.
+fetch 220 0 > "${tmp_dir}/fetch-403b.log" 2>&1 || fail "download failure must only warn when no exact build is expected"
 [[ ! -e "${work}/k/release/manager.apk" ]] || fail "APK present after failed download"
 
 echo "Manager exact build tests passed"
