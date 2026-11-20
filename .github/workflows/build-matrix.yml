@@ -12,11 +12,7 @@ on:
         type: boolean
         default: false
       build_source_evolution_x:
-        description: "Source: Evolution-X 5.10 LEGACY (only for Evo builds still on kernel 5.10)"
-        type: boolean
-        default: false
-      build_source_evolution_x_6_6:
-        description: "Source: Evolution-X 6.6 (current Evolution X, kernel 6.6)"
+        description: "Source: Evolution-X (LOS ROMs)"
         type: boolean
         default: false
       build_source_aosp_pablo:
@@ -40,7 +36,6 @@ on:
           - melt
           - lineageos
           - evolution-x
-          - evolution-x-6.6
           - aosp-pablo
           - pa-gr
       # ── Root Managers ──
@@ -84,7 +79,7 @@ on:
         required: false
         default: ""
       source_ref:
-        description: "Override branch/tag/commit (empty = preset default)"
+        description: "Override branch/tag/commit (empty = each repo's default branch)"
         required: false
         default: ""
       build_scope:
@@ -162,7 +157,6 @@ jobs:
           BUILD_SOURCE_MELT: ${{ inputs.build_source_melt }}
           BUILD_SOURCE_LINEAGEOS: ${{ inputs.build_source_lineageos }}
           BUILD_SOURCE_EVOLUTION_X: ${{ inputs.build_source_evolution_x }}
-          BUILD_SOURCE_EVOLUTION_X_6_6: ${{ inputs.build_source_evolution_x_6_6 }}
           BUILD_SOURCE_AOSP_PABLO: ${{ inputs.build_source_aosp_pablo }}
           BUILD_SOURCE_PA_GR: ${{ inputs.build_source_pa_gr }}
           BUILD_NONE: ${{ inputs.build_none }}
@@ -193,8 +187,8 @@ jobs:
       manager_ref: ""
       enable_susfs: ${{ fromJSON(matrix.enable_susfs) }}
       susfs_version: ${{ inputs.susfs_version }}
-      # Default only: presets that pin a kernel version (e.g. evolution-x-6.6 ->
-      # gki-android15-6.6) override this in scripts/resolve-kernel-source.sh.
+      # Default only: the kernel-version build profile (e.g. 6.6 ->
+      # gki-android15-6.6) overrides this in scripts/resolve-kernel-source.sh.
       susfs_kernel_branch: gki-android12-5.10
       susfs_ref: ${{ inputs.susfs_ref }}
       susfs_expected_version: ""

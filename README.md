@@ -115,19 +115,20 @@ Run it. When the job is green, download the artifact and flash the `.zip`.
 
 Presets are named after the project that maintains the tree. Selected from the `kernel_source` dropdown; defined in [`config/kernel-sources.json`](config/kernel-sources.json).
 
-| Preset | Upstream tree | Default ref | Defconfig | ROM family |
+| Preset | Upstream tree | Default branch today* | Build profile(s) | ROM family |
 |---|---|---|---|---|
-| **`melt`** | [`mohdakil2426/android_kernel_xiaomi_marble`](https://github.com/mohdakil2426/android_kernel_xiaomi_marble) | `melt-rebase` | `marble_defconfig` | 🟢 Stock **HyperOS** |
-| **`lineageos`** | [`LineageOS/android_kernel_xiaomi_sm8450`](https://github.com/LineageOS/android_kernel_xiaomi_sm8450) | `lineage-23.2` | GKI + fragments | 🟠 **LOS-based** ROMs |
-| **`evolution-x`** *(legacy 5.10)* | [`Evolution-X-Devices/kernel_xiaomi_sm8450`](https://github.com/Evolution-X-Devices/kernel_xiaomi_sm8450) | `cnb` | GKI + fragments | 🟠 Evolution X builds **still on kernel 5.10** |
-| **`evolution-x-6.6`** | [`Evolution-X-Devices/kernel_xiaomi_sm8450`](https://github.com/Evolution-X-Devices/kernel_xiaomi_sm8450) | `cnb-6.6` | `gki_defconfig` (pure GKI) | 🟠 **Evolution X on kernel 6.6** (current builds) |
-| **`aosp-pablo`** | [`aosp-pablo/android_kernel_xiaomi_sm8450`](https://github.com/aosp-pablo/android_kernel_xiaomi_sm8450) | `16` | GKI + fragments | 🟠 **LOS-based** ROMs |
-| **`pa-gr`** | [`pa-gr/android_kernel_xiaomi_sm8450`](https://github.com/pa-gr/android_kernel_xiaomi_sm8450) | `vauxite` | GKI + fragments | 🟠 **LOS-based** ROMs |
+| **`melt`** | [`mohdakil2426/android_kernel_xiaomi_marble`](https://github.com/mohdakil2426/android_kernel_xiaomi_marble) | `melt-rebase` | 5.10: `marble_defconfig` | 🟢 Stock **HyperOS** |
+| **`lineageos`** | [`LineageOS/android_kernel_xiaomi_sm8450`](https://github.com/LineageOS/android_kernel_xiaomi_sm8450) | `lineage-24.0` | 5.10: GKI + fragments | 🟠 **LOS-based** ROMs |
+| **`evolution-x`** | [`Evolution-X-Devices/kernel_xiaomi_sm8450`](https://github.com/Evolution-X-Devices/kernel_xiaomi_sm8450) | `cnb-6.6` | 6.6: `gki_defconfig` (pure GKI) · 5.10: GKI + fragments (`source_ref=cnb`) | 🟠 **Evolution X** |
+| **`aosp-pablo`** | [`aosp-pablo/android_kernel_xiaomi_sm8450`](https://github.com/aosp-pablo/android_kernel_xiaomi_sm8450) | `17` | 5.10: GKI + fragments | 🟠 **LOS-based** ROMs |
+| **`pa-gr`** | [`pa-gr/android_kernel_xiaomi_sm8450`](https://github.com/pa-gr/android_kernel_xiaomi_sm8450) | `vauxite` | 5.10: GKI + fragments | 🟠 **LOS-based** ROMs |
+
+\* No ref is pinned: with an empty `source_ref` the build follows each repo's **current default branch** (resolved at run time). The build profile is chosen from that branch's kernel version (read from its `Makefile`); a version with no profile fails the build instead of producing a bootlooping zip.
 
 > [!WARNING]
 > **ROM family is not interchangeable.** A `melt` build is for **stock HyperOS**. The four LOS-family builds are for **LineageOS-based custom ROMs only**. Flashing across families is the most common way to bootloop this device.
 >
-> **Kernel version must match too.** Current Evolution X builds for marble run **kernel 6.6** (check *Settings → About phone → Kernel version*). Flashing the 5.10 `evolution-x` build on them bootloops, because the ROM's vendor modules are built for 6.6 and can't load. Use **`evolution-x-6.6`**. The flasher now checks this and refuses a mismatched kernel series.
+> **Kernel version must match too.** Current Evolution X builds for marble run **kernel 6.6** (check *Settings → About phone → Kernel version*). A 5.10 kernel on them bootloops, because the ROM's vendor modules are built for 6.6 and can't load. The flasher checks this and refuses a mismatched kernel series.
 
 <details>
 <summary><b>How the two defconfig modes differ</b></summary>
@@ -193,7 +194,7 @@ Only **official upstream** manager repositories are allowlisted at CI time. Rand
 
 <br/>
 
-Kernel branch `gki-android12-5.10` (5.10 sources) or `gki-android15-6.6` (selected automatically for `evolution-x-6.6`), from [`simonpunk/susfs4ksu`](https://gitlab.com/simonpunk/susfs4ksu):
+Kernel branch `gki-android12-5.10` (5.10 trees) or `gki-android15-6.6` (6.6 trees, e.g. Evolution X), picked by the build profile, from [`simonpunk/susfs4ksu`](https://gitlab.com/simonpunk/susfs4ksu):
 
 | Preset | Target | Description |
 |---|---|---|
@@ -261,12 +262,11 @@ flowchart LR
 |---|---|---|
 | `build_source_melt` | `true` | Source: Melt (Stock HyperOS) |
 | `build_source_lineageos` | `false` | Source: LineageOS (LOS ROMs) |
-| `build_source_evolution_x` | `false` | Source: Evolution-X 5.10 (legacy, kernel 5.10 Evo builds only) |
-| `build_source_evolution_x_6_6` | `false` | Source: Evolution-X 6.6 (current Evolution X, kernel 6.6) |
+| `build_source_evolution_x` | `false` | Source: Evolution-X (LOS ROMs) |
 | `build_source_aosp_pablo` | `false` | Source: aosp-pablo (LOS ROMs) |
 | `build_source_pa_gr` | `false` | Source: pa-gr (LOS ROMs) |
 | `build_source_all` | `false` | Build ALL 5 kernel sources at once |
-| `source_ref` | *(empty)* | Override branch/tag/commit (empty = preset defaults) |
+| `source_ref` | *(empty)* | Override branch/tag/commit (empty = each repo's default branch) |
 | `build_none` | `false` | Baseline no-root kernel |
 | `build_kernelsu` | `false` | KernelSU (no SUSFS) |
 | `build_kernelsu_next` | `false` | KernelSU-Next |

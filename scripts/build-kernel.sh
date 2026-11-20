@@ -30,6 +30,15 @@ fi
 pushd "${KERNEL_DIR}" >/dev/null
 mkdir -p "${OUT_DIR}" "${RELEASE_DIR}"
 
+# The build profile was chosen for KERNEL_VERSION; make sure the checked-out
+# tree really is that version (a wrong-version profile bootloops).
+tree_version="$(sed -n 's/^VERSION *= *//p' Makefile | head -n1).$(sed -n 's/^PATCHLEVEL *= *//p' Makefile | head -n1)"
+if [[ -n "${KERNEL_VERSION:-}" && "${tree_version}" != "${KERNEL_VERSION}" ]]; then
+  echo "::error::Checked-out tree is kernel ${tree_version}, but the build profile is for ${KERNEL_VERSION}"
+  exit 1
+fi
+echo "Kernel tree version: ${tree_version}"
+
 export ARCH
 export SUBARCH="${ARCH}"
 export KBUILD_BUILD_USER="${KBUILD_BUILD_USER:-marble}"

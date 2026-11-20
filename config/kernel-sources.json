@@ -3,111 +3,130 @@
     "display": "Melt",
     "author": "Melt",
     "repo": "mohdakil2426/android_kernel_xiaomi_marble",
-    "default_ref": "melt-rebase",
     "rom_label": "HyperOS",
     "rom_family": "hyperos",
     "rom_support": "Official Xiaomi stock HyperOS only",
-    "defconfig_mode": "single",
-    "defconfig": "marble_defconfig",
-    "notes": "Existing HyperOS-oriented Melt-based marble source. Default for stock HyperOS."
+    "notes": "HyperOS-oriented Melt-based marble source. Default for stock HyperOS.",
+    "profiles": {
+      "5.10": {
+        "defconfig_mode": "single",
+        "defconfig": "marble_defconfig",
+        "susfs_kernel_branch": "gki-android12-5.10"
+      }
+    }
   },
   "lineageos": {
     "display": "LineageOS",
     "author": "LineageOS",
     "repo": "LineageOS/android_kernel_xiaomi_sm8450",
-    "default_ref": "lineage-23.2",
     "rom_label": "LineageOS",
     "rom_family": "los",
     "rom_support": "LineageOS and LOS-based custom ROMs only",
-    "defconfig_mode": "gki_fragments",
-    "base_defconfig": "gki_defconfig",
-    "config_fragments": [
-      "vendor/waipio_GKI.config",
-      "vendor/xiaomi_GKI.config",
-      "vendor/marble_GKI.config",
-      "vendor/debugfs.config"
-    ],
     "recommended_toolchain": "llvm-22.1.8",
-    "notes": "Official LineageOS SM8450 kernel (Poco F5 / marble). Custom LOS-based ROMs only. Needs llvm-22.1.8 (armv9 flags)."
+    "notes": "Official LineageOS SM8450 kernel (Poco F5 / marble). Custom LOS-based ROMs only. Needs llvm-22.1.8 (armv9 flags).",
+    "profiles": {
+      "5.10": {
+        "defconfig_mode": "gki_fragments",
+        "base_defconfig": "gki_defconfig",
+        "config_fragments": [
+          "vendor/waipio_GKI.config",
+          "vendor/xiaomi_GKI.config",
+          "vendor/marble_GKI.config",
+          "vendor/debugfs.config"
+        ],
+        "susfs_kernel_branch": "gki-android12-5.10"
+      }
+    }
   },
   "evolution-x": {
-    "display": "Evolution-X 5.10 (legacy)",
+    "display": "Evolution-X",
     "author": "Evolution-X",
     "repo": "Evolution-X-Devices/kernel_xiaomi_sm8450",
-    "default_ref": "cnb",
     "rom_label": "Evolution-X",
     "rom_family": "los",
-    "rom_support": "Evolution X and LOS-based custom ROMs only",
-    "defconfig_mode": "gki_fragments",
-    "base_defconfig": "gki_defconfig",
-    "config_fragments": [
-      "vendor/waipio_GKI.config",
-      "vendor/xiaomi_GKI.config",
-      "vendor/marble_GKI.config",
-      "vendor/debugfs.config"
-    ],
+    "rom_support": "Evolution X only (kernel 6.6 on the default branch; 5.10 via source_ref=cnb)",
     "recommended_toolchain": "llvm-22.1.8",
-    "kernel_version": "5.10",
-    "notes": "LEGACY Evolution-X 5.10 kernel (branch cnb). Only for Evolution X builds that still ship kernel 5.10. Current Evolution X marble builds use kernel 6.6: pick evolution-x-6.6 instead, or the phone will bootloop. Needs llvm-22.1.8 (armv9 flags)."
-  },
-  "evolution-x-6.6": {
-    "display": "Evolution-X 6.6",
-    "author": "Evolution-X",
-    "repo": "Evolution-X-Devices/kernel_xiaomi_sm8450",
-    "default_ref": "cnb-6.6",
-    "rom_label": "Evolution-X (kernel 6.6)",
-    "rom_family": "los",
-    "rom_support": "Evolution X builds running kernel 6.6 only",
-    "defconfig_mode": "single",
-    "defconfig": "gki_defconfig",
-    "recommended_toolchain": "llvm-22.1.8",
-    "kernel_version": "6.6",
-    "susfs_kernel_branch": "gki-android15-6.6",
-    "config_disable": ["MODULE_SIG_PROTECT"],
-    "config_require": ["MODVERSIONS", "MODULE_SIG", "DEBUG_INFO_BTF", "DEBUG_INFO_BTF_MODULES", "MODULE_ALLOW_BTF_MISMATCH"],
-    "notes": "Evolution X kernel 6.6 (branch cnb-6.6). The ROM uses a Kleaf mixed build: boot.img carries the pure GKI kernel_aarch64 Image (gki_defconfig, no vendor fragments), and vendor/system_dlkm modules are built against its KMI. So the Image must be plain gki_defconfig. MODULE_SIG_PROTECT is disabled because a self-built Image cannot verify the ROM's signed system_dlkm GKI modules, which would then be refused (-EACCES) when they export protected symbols. MODULE_ALLOW_BTF_MISMATCH (set by gki_defconfig) is required because our vmlinux BTF can't match the ROM's byte for byte. DEBUG_INFO_BTF_MODULES must stay on (needs pahole >= 1.21) or struct module changes and every vendor module is rejected. The tree ships KernelSU-Next in drivers/kernelsu; it is removed before a manager's setup.sh runs, otherwise the selected manager is silently ignored."
+    "notes": "Evolution X SM8450 kernel. The repo default branch (cnb-6.6) is kernel 6.6; set source_ref=cnb for the legacy 5.10 tree, and the matching build profile is picked from the tree's Makefile. 6.6 profile: the ROM uses a Kleaf mixed build where boot.img carries the pure GKI kernel_aarch64 Image (gki_defconfig, no vendor fragments) and vendor/system_dlkm modules are built against its KMI. MODULE_SIG_PROTECT is disabled because a self-built Image cannot verify the ROM's signed system_dlkm GKI modules, which would then be refused (-EACCES) when they export protected symbols. DEBUG_INFO_BTF_MODULES must stay on (needs pahole >= 1.21) or struct module changes and every vendor module is rejected; MODULE_ALLOW_BTF_MISMATCH (from gki_defconfig) because our vmlinux BTF can't match the ROM's byte for byte. The 6.6 tree ships KernelSU-Next in drivers/kernelsu; patch-manager.sh removes it before a manager's setup.sh runs.",
+    "profiles": {
+      "6.6": {
+        "defconfig_mode": "single",
+        "defconfig": "gki_defconfig",
+        "susfs_kernel_branch": "gki-android15-6.6",
+        "config_disable": [
+          "MODULE_SIG_PROTECT"
+        ],
+        "config_require": [
+          "MODVERSIONS",
+          "MODULE_SIG",
+          "DEBUG_INFO_BTF",
+          "DEBUG_INFO_BTF_MODULES",
+          "MODULE_ALLOW_BTF_MISMATCH"
+        ]
+      },
+      "5.10": {
+        "defconfig_mode": "gki_fragments",
+        "base_defconfig": "gki_defconfig",
+        "config_fragments": [
+          "vendor/waipio_GKI.config",
+          "vendor/xiaomi_GKI.config",
+          "vendor/marble_GKI.config",
+          "vendor/debugfs.config"
+        ],
+        "susfs_kernel_branch": "gki-android12-5.10"
+      }
+    }
   },
   "aosp-pablo": {
     "display": "aosp-pablo",
     "author": "aosp-pablo",
     "repo": "aosp-pablo/android_kernel_xiaomi_sm8450",
-    "default_ref": "16",
     "rom_label": "aosp-pablo",
     "rom_family": "los",
     "rom_support": "aosp-pablo / LOS-based custom ROMs only",
-    "defconfig_mode": "gki_fragments",
-    "base_defconfig": "gki_defconfig",
-    "config_fragments": [
-      "vendor/waipio_GKI.config",
-      "vendor/xiaomi_GKI.config",
-      "vendor/marble_GKI.config",
-      "vendor/debugfs.config"
-    ],
     "recommended_toolchain": "llvm-22.1.8",
-    "notes": "GitHub org aosp-pablo SM8450 kernel (Marble Development). LOS-based custom ROMs only. Needs llvm-22.1.8 (armv9 flags)."
+    "notes": "GitHub org aosp-pablo SM8450 kernel (Marble Development). LOS-based custom ROMs only. Needs llvm-22.1.8 (armv9 flags).",
+    "profiles": {
+      "5.10": {
+        "defconfig_mode": "gki_fragments",
+        "base_defconfig": "gki_defconfig",
+        "config_fragments": [
+          "vendor/waipio_GKI.config",
+          "vendor/xiaomi_GKI.config",
+          "vendor/marble_GKI.config",
+          "vendor/debugfs.config"
+        ],
+        "susfs_kernel_branch": "gki-android12-5.10"
+      }
+    }
   },
   "pa-gr": {
     "display": "pa-gr",
     "author": "pa-gr",
     "repo": "pa-gr/android_kernel_xiaomi_sm8450",
-    "default_ref": "vauxite",
     "rom_label": "pa-gr",
     "rom_family": "los",
     "rom_support": "pa-gr / LOS-based custom ROMs only",
-    "defconfig_mode": "gki_fragments",
-    "base_defconfig": "gki_defconfig",
-    "config_fragments": [
-      "vendor/waipio_GKI.config",
-      "vendor/xiaomi_GKI.config",
-      "vendor/marble_GKI.config",
-      "vendor/debugfs.config"
-    ],
     "recommended_toolchain": "llvm-22.1.8",
-    "notes": "pa-gr SM8450 marble kernel (default branch vauxite). GKI fragments + llvm-22.1.8. Optional source_patches for Clang 22 KVM clidr (remove when upstream fixed). vauxite may ship in-tree KernelSU — smoke-test manager apply.",
+    "notes": "pa-gr SM8450 marble kernel. GKI fragments + llvm-22.1.8. Optional source_patches for Clang 22 KVM clidr (remove when upstream fixed). vauxite may ship in-tree KernelSU — smoke-test manager apply.",
+    "profiles": {
+      "5.10": {
+        "defconfig_mode": "gki_fragments",
+        "base_defconfig": "gki_defconfig",
+        "config_fragments": [
+          "vendor/waipio_GKI.config",
+          "vendor/xiaomi_GKI.config",
+          "vendor/marble_GKI.config",
+          "vendor/debugfs.config"
+        ],
+        "susfs_kernel_branch": "gki-android12-5.10"
+      }
+    },
     "source_patches": {
       "enabled": true,
       "dir": "patches/kernel-sources/pa-gr/vauxite",
-      "match_refs": ["vauxite"],
+      "match_refs": [
+        "vauxite"
+      ],
       "notes": "Clang 22 -Wuninitialized-const-pointer on sys_regs.c. Disable or delete when pa-gr/vauxite includes equivalent fix."
     }
   }

@@ -93,8 +93,8 @@ check_kernel_series() {
     ui_print "This zip has a ${new_ver} kernel, but your ROM";
     ui_print "runs a ${cur_ver} kernel. Its modules can't load";
     ui_print "on ${new_ver}, so flashing would bootloop.";
-    ui_print "Build the source preset that matches your ROM";
-    ui_print "(e.g. evolution-x-6.6 for Evolution X 6.6).";
+    ui_print "Build from the kernel branch your ROM uses";
+    ui_print "(e.g. Evolution X 6.6 = evolution-x, default branch).";
     ui_print "If the boot slot already holds a wrong kernel,";
     ui_print "rename this zip to end in -force.zip to override.";
     abort "Kernel version mismatch. Nothing was flashed.";

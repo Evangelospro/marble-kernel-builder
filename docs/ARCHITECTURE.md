@@ -357,18 +357,19 @@ Strategy: `fail-fast: false` so one manager failure does not cancel siblings.
 
 ### 7.1 Presets (`config/kernel-sources.json`)
 
-| ID | Display | Repo | Default ref | Defconfig mode | ROM family |
+| ID | Display | Repo | Default branch today | Profiles (kernel → defconfig mode) | ROM family |
 |----|---------|------|-------------|----------------|------------|
-| `melt` | Melt | `mohdakil2426/android_kernel_xiaomi_marble` | `melt-rebase` | `single` → `marble_defconfig` | HyperOS |
-| `lineageos` | LineageOS | `LineageOS/android_kernel_xiaomi_sm8450` | `lineage-23.2` | `gki_fragments` | LOS |
-| `evolution-x` | Evolution-X 5.10 (legacy) | `Evolution-X-Devices/kernel_xiaomi_sm8450` | `cnb` | `gki_fragments` | LOS |
-| `evolution-x-6.6` | Evolution-X 6.6 | `Evolution-X-Devices/kernel_xiaomi_sm8450` | `cnb-6.6` | `single` → `gki_defconfig` | LOS |
-| `aosp-pablo` | aosp-pablo | `aosp-pablo/android_kernel_xiaomi_sm8450` | `16` | `gki_fragments` | LOS |
-| `pa-gr` | pa-gr | `pa-gr/android_kernel_xiaomi_sm8450` | `vauxite` | `gki_fragments` | LOS |
+| `melt` | Melt | `mohdakil2426/android_kernel_xiaomi_marble` | `melt-rebase` | 5.10 → `single` `marble_defconfig` | HyperOS |
+| `lineageos` | LineageOS | `LineageOS/android_kernel_xiaomi_sm8450` | `lineage-24.0` | 5.10 → `gki_fragments` | LOS |
+| `evolution-x` | Evolution-X | `Evolution-X-Devices/kernel_xiaomi_sm8450` | `cnb-6.6` | 6.6 → `single` `gki_defconfig`; 5.10 (`cnb`) → `gki_fragments` | LOS |
+| `aosp-pablo` | aosp-pablo | `aosp-pablo/android_kernel_xiaomi_sm8450` | `17` | 5.10 → `gki_fragments` | LOS |
+| `pa-gr` | pa-gr | `pa-gr/android_kernel_xiaomi_sm8450` | `vauxite` | 5.10 → `gki_fragments` | LOS |
 
 LOS presets recommend **`llvm-22.1.8`** (armv9 march flags rejected by Android clang-12 / `clang-r416183b`).
 
-**evolution-x-6.6 note:** the ROM builds its kernel with Kleaf as a *mixed build*. `boot.img` carries the pure GKI `kernel_aarch64` Image (`gki_defconfig`, no vendor fragments; the `waipio_perf` fragments only apply to vendor modules), and `vendor_dlkm`/`vendor_boot`/`system_dlkm` modules are built against that KMI. So the preset builds plain `gki_defconfig`, and the preset's `config_*` keys enforce module-loading compatibility:
+**Ref and profile resolution:** presets pin no ref. With an empty `source_ref`, `resolve-kernel-source.sh` resolves the repo's default branch (`git ls-remote --symref … HEAD`), reads `VERSION`/`PATCHLEVEL` from that ref's `Makefile`, and selects `profiles.<MAJOR.MINOR>` (defconfig mode, fragments, SUSFS branch, `config_enable`/`config_disable`/`config_require`). No matching profile fails the run; `build-kernel.sh` re-checks the checked-out tree's version against the profile.
+
+**Evolution-X 6.6 profile note:** the ROM builds its kernel with Kleaf as a *mixed build*. `boot.img` carries the pure GKI `kernel_aarch64` Image (`gki_defconfig`, no vendor fragments; the `waipio_perf` fragments only apply to vendor modules), and `vendor_dlkm`/`vendor_boot`/`system_dlkm` modules are built against that KMI. So the preset builds plain `gki_defconfig`, and the preset's `config_*` keys enforce module-loading compatibility:
 - `config_disable: MODULE_SIG_PROTECT`: a self-built Image has its own signing key, so the ROM's signed GKI modules in `system_dlkm` fail verification. With protection on, any of them exporting a protected symbol is refused with `-EACCES`.
 - `config_require: DEBUG_INFO_BTF(_MODULES), MODULE_ALLOW_BTF_MISMATCH, MODVERSIONS, MODULE_SIG`: dropping `DEBUG_INFO_BTF_MODULES` (happens silently without `pahole` >= 1.21, so CI installs `dwarves`) changes `struct module`, and every vendor module is rejected.
 - The tree ships KernelSU-Next as a real `drivers/kernelsu` directory. `patch-manager.sh` removes it before running a manager's `setup.sh`; otherwise the selected manager's symlink lands *inside* it and the in-tree fork is silently built instead. `none` builds force `CONFIG_KSU` off.
@@ -429,7 +430,7 @@ Produces env exports and `release/kernel-source.env` including:
 | `DEFCONFIG_MODE` | `single` or `gki_fragments` |
 | `DEFCONFIG` / `BASE_DEFCONFIG` / `CONFIG_FRAGMENTS` | Config construction |
 
-Optional workflow `source_ref` overrides the preset default branch/tag/commit.
+Optional workflow `source_ref` overrides the repo default branch with a branch/tag/commit.
 
 ### 7.4 ROM compatibility (product truth)
 
@@ -574,7 +575,7 @@ patch-manager.sh
 
 | Concern | Detail |
 |---------|--------|
-| Kernel branch | `gki-android12-5.10` passed by the matrix; a preset's `susfs_kernel_branch` overrides it (`evolution-x-6.6` → `gki-android15-6.6`) |
+| Kernel branch | `gki-android12-5.10` passed by the matrix; the build profile's `susfs_kernel_branch` overrides it (6.6 → `gki-android15-6.6`) |
 | Pins | `config/susfs-refs.json`: `v2.2.0` → `4003ecf2…`, `v2.1.0` → `86114db0…` |
 | Upstream | `https://gitlab.com/simonpunk/susfs4ksu.git` |
 | Kernel apply | Patch `50_add_susfs_in_gki-<branch>.patch` + rsync `fs/` + `include/` |
@@ -721,7 +722,7 @@ AK3_marble_<FAMILY>_<source>_<manager>[-version][-codeN][_susfs-vX.Y.Z]_rN.zip
 
 | Token | Values |
 |-------|--------|
-| `FAMILY` | `MELT` (`melt`) · `LOS` (lineageos / evolution-x / evolution-x-6.6 / aosp-pablo / pa-gr) |
+| `FAMILY` | `MELT` (`melt`) · `LOS` (lineageos / evolution-x / aosp-pablo / pa-gr) |
 | `manager` | `noroot` · `kernelsu` · `ksunext` · `sukisu` · `resukisu` |
 | SUSFS off | omit segment |
 | LTO | **not** in zip name (banner + build-info) |

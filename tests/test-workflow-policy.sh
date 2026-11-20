@@ -148,7 +148,7 @@ grep -Fq 'concurrency:' "${wrapper}" || {
   exit 1
 }
 
-for preset in melt lineageos evolution_x evolution_x_6_6 aosp_pablo pa_gr; do
+for preset in melt lineageos evolution_x aosp_pablo pa_gr; do
   grep -Fq "build_source_${preset}:" "${matrix}" || {
     echo "FAIL: matrix workflow missing kernel source checkbox: build_source_${preset}" >&2
     exit 1
