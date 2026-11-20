@@ -217,7 +217,7 @@ for key in CONFIG_ENABLE CONFIG_DISABLE CONFIG_REQUIRE; do
 done
 if [[ -n "${RECOMMENDED_TOOLCHAIN}" ]]; then
   echo "  recommended_toolchain=${RECOMMENDED_TOOLCHAIN}"
-  if [[ -n "${TOOLCHAIN:-}" && "${TOOLCHAIN}" != "${RECOMMENDED_TOOLCHAIN}" ]]; then
+  if [[ -n "${TOOLCHAIN:-}" && "${TOOLCHAIN}" != auto && "${TOOLCHAIN}" != "${RECOMMENDED_TOOLCHAIN}" ]]; then
     echo "::warning::kernel_source '${KERNEL_SOURCE}' recommends toolchain '${RECOMMENDED_TOOLCHAIN}' (selected: ${TOOLCHAIN}). Older Android clang may fail on armv9 flags."
   fi
 fi

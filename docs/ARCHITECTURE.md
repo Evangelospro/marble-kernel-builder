@@ -508,7 +508,7 @@ Patches never land on the remote kernel or manager repos — only on the ephemer
 3. Apply **LTO** (`none` / `thin` / `full`) via `scripts/config`.  
 4. `olddefconfig`; assert final `.config` has required symbols.  
 5. LLVM free-runner: cap `JOBS` to **2** unless `JOBS_FORCE` set.  
-6. Thin LTO: `ld.lld` wrapper with `--thinlto-jobs=2` and `--thinlto-cache-dir`.  
+6. Thin LTO: `ld.lld` wrapper with `--thinlto-jobs` and `--thinlto-cache-dir`, passed as `make LD=<wrapper>` (the kernel Makefile assigns `LD = ld.lld` for `LLVM=1`, which overrides an exported `LD`). Compile and ThinLTO jobs are memory-aware: one per 3 GiB RAM, at most `nproc` (16 GiB runners: 4).
 7. `make Image` (and `modules` + `dtbs` if `build_scope=full`).  
 8. Sanity: `Image` exists and size ≥ 5 000 000 bytes; copy to `release/`.
 
@@ -591,7 +591,7 @@ patch-manager.sh
 | Mode | Config intent | Free-runner notes |
 |------|---------------|-------------------|
 | `none` | LTO disabled (`LTO_NONE` / clear clang LTO) | Fastest link; no LTO swap required |
-| `thin` | **Default** — `LTO_CLANG` + `LTO_CLANG_THIN` | Swap 16 GiB; thinlto-jobs=2; ThinLTO Actions cache |
+| `thin` | **Default** — `LTO_CLANG` + `LTO_CLANG_THIN` | Swap 16 GiB; memory-aware thinlto-jobs; ThinLTO Actions cache |
 | `full` | `LTO_CLANG` + `LTO_CLANG_FULL` | Optional; memory-heavy; warning emitted |
 
 ### Application order (inside `build-kernel.sh`)
@@ -676,13 +676,15 @@ restore-keys (prefix match, broadest last):
 
 ```text
 thinlto_key =
-  marble-builder-thinlto-v1-{os}-{arch}-{toolchain}-{kernel_id}-{source_commit}-lto{mode}
+  marble-builder-thinlto-v2-{os}-{arch}-{toolchain}-{kernel_id}-{source_commit}-lto{mode}
 
 thinlto_prefix (restore-keys) =
-  marble-builder-thinlto-v1-{os}-{arch}-{toolchain}-{kernel_id}-lto{mode}
+  marble-builder-thinlto-v2-{os}-{arch}-{toolchain}-{kernel_id}-lto{mode}
 ```
 
-Path restored/saved: `/home/runner/.cache/thinlto`.
+Path restored/saved: `/home/runner/.cache/thinlto` (capped at 2 GiB by `--thinlto-cache-policy`). Never saved empty. v1 entries were always empty because the wrapper was not reaching `make`.
+
+ccache: before saving, entries not used by this build are evicted (`ccache --evict-older-than <time since restore>`; ccache refreshes an entry's mtime on every hit), so a cache restored via a fallback key does not keep growing.
 
 ### 11.4 Save policy
 
@@ -935,7 +937,7 @@ Policy tests run with related env vars **unset** so ambient CI env cannot fake p
 | Kernel sources | Named presets (Melt + LOS family) | Per-device manifests |
 | Caching | Toolchain + ccache v4 + ThinLTO | Mega multi-bucket caches |
 | Complexity | Smaller, auditable | Higher scale, higher complexity |
-| Free runners | First-class (swap, JOBS=2, thin) | Often assume larger runners |
+| Free runners | First-class (swap, memory-aware JOBS, thin) | Often assume larger runners |
 | Extensibility | Add JSON + tests + dropdown | Add device config + action wiring |
 
 Marble intentionally optimizes for **correctness, allowlists, and free-runner builds** rather than mega-scale multi-device fan-out.

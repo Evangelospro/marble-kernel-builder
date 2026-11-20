@@ -333,6 +333,9 @@ jobs:
           source_prefix="${kernel_prefix}-${source_commit}"
           manager_prefix="${source_prefix}-${MANAGER}"
           key="${manager_prefix}-${manager_commit:-none}-${susfs_commit:-none}-${BUILD_SCOPE}-${config_hash}"
+          # Start of this build's cache use: entries not touched after this are
+          # trimmed before saving (ccache refreshes an entry's mtime on every hit).
+          echo "CACHE_EPOCH=$(date +%s)" >> "$GITHUB_ENV"
           {
             echo "key=${key}"
             echo "base=${base}"
@@ -340,8 +343,8 @@ jobs:
             echo "source_prefix=${source_prefix}"
             echo "manager_prefix=${manager_prefix}"
             echo "lto_mode=${lto_mode}"
-            echo "thinlto_key=marble-builder-thinlto-v1-${RUNNER_OS}-${RUNNER_ARCH}-${toolchain_id}-${kernel_id}-${source_commit}-lto${lto_mode}"
-            echo "thinlto_prefix=marble-builder-thinlto-v1-${RUNNER_OS}-${RUNNER_ARCH}-${toolchain_id}-${kernel_id}-lto${lto_mode}"
+            echo "thinlto_key=marble-builder-thinlto-v2-${RUNNER_OS}-${RUNNER_ARCH}-${toolchain_id}-${kernel_id}-${source_commit}-lto${lto_mode}"
+            echo "thinlto_prefix=marble-builder-thinlto-v2-${RUNNER_OS}-${RUNNER_ARCH}-${toolchain_id}-${kernel_id}-lto${lto_mode}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Restore ccache
@@ -471,6 +474,16 @@ jobs:
       # so the next run can reuse partial work. Never save on cancel. Exact GHA
       # keys are immutable — only save when this run did not restore an exact hit.
       # Product artifacts (ZIP/release) stay success-only above.
+      # A cache restored via a restore-key (older commit, other manager) keeps all
+      # its old entries; saving them again only grows every restore/upload. Keep
+      # just what this build used.
+      - name: Trim ccache to this build's entries
+        if: ${{ always() && inputs.enable_ccache && !cancelled() && steps.ccache-restore.outputs.cache-hit != 'true' && env.CACHE_EPOCH != '' }}
+        run: |
+          age=$(( $(date +%s) - CACHE_EPOCH + 60 ))
+          ccache --evict-older-than "${age}s" || true
+          ccache -s | grep -E 'Cache size|Files' || true
+
       - name: Save ccache
         if: ${{ always() && inputs.enable_ccache && !cancelled() && steps.ccache-restore.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -478,8 +491,17 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.cache-context.outputs.key }}
 
+      - name: Check ThinLTO cache contents
+        id: thinlto-contents
+        if: ${{ always() && inputs.lto == 'thin' && !cancelled() }}
+        run: |
+          files="$(find /home/runner/.cache/thinlto -type f -name 'llvmcache-*' 2>/dev/null | wc -l)"
+          echo "ThinLTO cache: ${files} entries, $(du -sh /home/runner/.cache/thinlto 2>/dev/null | cut -f1)"
+          echo "files=${files}" >> "$GITHUB_OUTPUT"
+
+      # Never save an empty cache: an exact-key hit is not re-saved later.
       - name: Save ThinLTO cache
-        if: ${{ always() && inputs.lto == 'thin' && !cancelled() && steps.thinlto-restore.outputs.cache-hit != 'true' }}
+        if: ${{ always() && inputs.lto == 'thin' && !cancelled() && steps.thinlto-restore.outputs.cache-hit != 'true' && steps.thinlto-contents.outputs.files != '0' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /home/runner/.cache/thinlto

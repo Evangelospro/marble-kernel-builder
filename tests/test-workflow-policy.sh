@@ -33,7 +33,10 @@ required_core_patterns=(
   'marble-builder-ccache-v4-'
   'Restore ThinLTO cache'
   'Save ThinLTO cache'
-  'marble-builder-thinlto-v1-'
+  'marble-builder-thinlto-v2-'
+  'Trim ccache to this build'"'"'s entries'
+  'ccache --evict-older-than'
+  "steps.thinlto-contents.outputs.files != '0'"
   'runner_image_version='
   'ccache_hit='
   'publish_step_summary'
@@ -435,5 +438,20 @@ if grep -Fq 'contents: write' "${core}"; then
   echo "FAIL: build-core.yml should stay read-only; release writes belong in build-matrix.yml release job" >&2
   exit 1
 fi
+
+# ThinLTO wrapper must reach make on the command line: the kernel Makefile's
+# `LD = ld.lld` (LLVM=1) overrides an exported LD, which left the cache empty.
+grep -Fq 'make_ld_args=(LD="${wrapper}")' scripts/build-kernel.sh || {
+  echo "FAIL: build-kernel.sh must pass the ThinLTO wrapper as a make argument (LD=...)" >&2
+  exit 1
+}
+if grep -Eq '^\s*export (HOST)?LD=' scripts/build-kernel.sh; then
+  echo "FAIL: exporting LD has no effect with LLVM=1; pass it on the make command line" >&2
+  exit 1
+fi
+grep -q 'make -j"${JOBS}" "${make_args\[@\]}"' scripts/build-kernel.sh || {
+  echo "FAIL: the kernel build must use make_args (which carries LD=wrapper)" >&2
+  exit 1
+}
 
 echo "Workflow policy tests passed"

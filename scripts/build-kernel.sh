@@ -15,20 +15,45 @@ JOBS="${JOBS:-$(nproc)}"
 USE_CCACHE="${USE_CCACHE:-true}"
 TOOLCHAIN="${TOOLCHAIN:-android-r416183b}"
 
-# Free GitHub-hosted runners (~7 GiB) often OOM (exit 137) while linking vmlinux
-# with LLVM 22 at full -j$(nproc). Cap parallelism for the heavy toolchain.
-# Free defaults: LLVM JOBS<=2, THINLTO_JOBS=2 (see ThinLTO wrapper below).
-# Self-hosted override examples:
-#   JOBS_FORCE=1 JOBS=8 THINLTO_JOBS=4
-if [[ -z "${JOBS_FORCE:-}" ]]; then
-  if [[ "${TOOLCHAIN}" == "llvm-22.1.8" || "${TOOLCHAIN}" == "clang-18" ]] && (( JOBS > 2 )); then
-    echo "Capping JOBS from ${JOBS} to 2 for ${TOOLCHAIN} (OOM-safe on free runners)"
-    JOBS=2
-  fi
+LTO="${LTO:-thin}"
+
+# Memory-aware parallelism: about one compile/ThinLTO job per 3 GiB of RAM
+# (GKI + clang LTO peaks around that per job), never more than the CPUs.
+# 7 GiB runners -> 2 jobs, 16 GiB runners -> 4 (= all cores). Swap covers peaks.
+# Self-hosted override: JOBS_FORCE=1 JOBS=8 THINLTO_JOBS=8
+mem_gib="$(awk '/^MemTotal:/ { printf "%d", $2 / 1048576 }' /proc/meminfo 2>/dev/null || echo 0)"
+mem_jobs=$(( mem_gib / 3 ))
+(( mem_jobs >= 1 )) || mem_jobs=1
+if [[ -z "${JOBS_FORCE:-}" ]] && (( JOBS > mem_jobs )); then
+  echo "Capping JOBS from ${JOBS} to ${mem_jobs} (${mem_gib} GiB RAM)"
+  JOBS="${mem_jobs}"
 fi
+THINLTO_JOBS="${THINLTO_JOBS:-${JOBS}}"
 
 pushd "${KERNEL_DIR}" >/dev/null
 mkdir -p "${OUT_DIR}" "${RELEASE_DIR}"
+
+# ThinLTO: route the linker through a wrapper that caps codegen jobs and uses a
+# persistent cache dir (restored/saved by the workflow). It must be passed on
+# the make command line: the kernel Makefile assigns `LD = ld.lld` for LLVM=1,
+# which overrides an exported LD (the old approach, so the cache stayed empty).
+# The appended --thinlto-cache-dir also wins over the in-tree one some trees
+# set under out/ (lld takes the last value).
+make_ld_args=()
+if [[ "${LTO}" == "thin" ]]; then
+  THINLTO_CACHE_DIR="${THINLTO_CACHE_DIR:-${HOME}/.cache/thinlto}"
+  mkdir -p "${THINLTO_CACHE_DIR}"
+  wrapper="$(pwd)/${RELEASE_DIR}/ld-thinlto-wrapper"
+  {
+    printf '#!/bin/bash\n'
+    # LLVM prunes by access time, which is unreliable after a cache restore,
+    # so bound the cache by size (keeps restore/upload of it cheap).
+    printf 'exec ld.lld "$@" --thinlto-jobs=%s --thinlto-cache-dir=%q --thinlto-cache-policy=cache_size_bytes=2g\n' \
+      "${THINLTO_JOBS}" "${THINLTO_CACHE_DIR}"
+  } > "${wrapper}"
+  chmod +x "${wrapper}"
+  make_ld_args=(LD="${wrapper}")
+fi
 
 # The build profile was chosen for KERNEL_VERSION; make sure the checked-out
 # tree really is that version (a wrong-version profile bootloops).
@@ -73,17 +98,21 @@ fi
 
 clang --version | tee "${RELEASE_DIR}/build.log"
 
+# Same variables for every make call (config and build), so Kconfig sees the
+# same LD as the build.
+make_args=(O="${OUT_DIR}" ARCH="${ARCH}" LLVM=1 LLVM_IAS=1 CC="${CC}" "${make_ld_args[@]}")
+
 DEFCONFIG_MODE="${DEFCONFIG_MODE:-single}"
 case "${DEFCONFIG_MODE}" in
   single)
     active_defconfig="${DEFCONFIG:-marble_defconfig}"
     echo "Using single defconfig: ${active_defconfig}" | tee -a "${RELEASE_DIR}/build.log"
-    make O="${OUT_DIR}" ARCH="${ARCH}" LLVM=1 LLVM_IAS=1 CC="${CC}" "${active_defconfig}" 2>&1 | tee -a "${RELEASE_DIR}/build.log"
+    make "${make_args[@]}" "${active_defconfig}" 2>&1 | tee -a "${RELEASE_DIR}/build.log"
     ;;
   gki_fragments)
     base_defconfig="${BASE_DEFCONFIG:-gki_defconfig}"
     echo "Using GKI base defconfig: ${base_defconfig}" | tee -a "${RELEASE_DIR}/build.log"
-    make O="${OUT_DIR}" ARCH="${ARCH}" LLVM=1 LLVM_IAS=1 CC="${CC}" "${base_defconfig}" 2>&1 | tee -a "${RELEASE_DIR}/build.log"
+    make "${make_args[@]}" "${base_defconfig}" 2>&1 | tee -a "${RELEASE_DIR}/build.log"
 
     if [[ -z "${CONFIG_FRAGMENTS:-}" ]]; then
       echo "::error::DEFCONFIG_MODE=gki_fragments requires CONFIG_FRAGMENTS"
@@ -128,7 +157,6 @@ fi
 
 # Apply selectable Clang LTO for all presets (including gki_fragments / Melt).
 # Default thin is free-runner safe with swap + thinlto job caps; full needs more RAM.
-LTO="${LTO:-thin}"
 echo "Applying LTO mode: ${LTO}" | tee -a "${RELEASE_DIR}/build.log"
 case "${LTO}" in
   none)
@@ -169,7 +197,7 @@ for opt in "${config_disable_list[@]}"; do
   scripts/config --file "${OUT_DIR}/.config" -d "${opt}"
 done
 
-make O="${OUT_DIR}" ARCH="${ARCH}" LLVM=1 LLVM_IAS=1 CC="${CC}" olddefconfig 2>&1 | tee -a "${RELEASE_DIR}/build.log"
+make "${make_args[@]}" olddefconfig 2>&1 | tee -a "${RELEASE_DIR}/build.log"
 
 config_errors=0
 for opt in "${config_enable_list[@]}" "${config_require_list[@]}"; do
@@ -207,26 +235,8 @@ if [[ "${BUILD_SCOPE}" == "full" ]]; then
   targets+=(modules dtbs)
 fi
 
-if [[ "${LTO}" == "thin" ]]; then
-  # Cap ThinLTO parallel codegen on free runners (~7 GiB) to avoid OOM during link.
-  THINLTO_JOBS="${THINLTO_JOBS:-2}"
-  # WildKernels-style durable ThinLTO cache (restored/saved by the workflow when present).
-  THINLTO_CACHE_DIR="${THINLTO_CACHE_DIR:-${HOME}/.cache/thinlto}"
-  mkdir -p "${THINLTO_CACHE_DIR}"
-  wrapper="$(pwd)/${RELEASE_DIR}/ld-thinlto-wrapper"
-  {
-    printf '#!/bin/bash\n'
-    printf 'exec ld.lld "$@" --thinlto-jobs=%s --thinlto-cache-dir=%q\n' \
-      "${THINLTO_JOBS}" "${THINLTO_CACHE_DIR}"
-  } > "${wrapper}"
-  chmod +x "${wrapper}"
-  export LD="${wrapper}"
-  export HOSTLD="${wrapper}"
-  export THINLTO_CACHE_DIR
-  echo "ThinLTO jobs=${THINLTO_JOBS} cache=${THINLTO_CACHE_DIR} via ${wrapper}" | tee -a "${RELEASE_DIR}/build.log"
-fi
-
-make -j"${JOBS}" O="${OUT_DIR}" ARCH="${ARCH}" LLVM=1 LLVM_IAS=1 CC="${CC}" "${targets[@]}" 2>&1 | tee -a "${RELEASE_DIR}/build.log"
+echo "Build jobs=${JOBS}${make_ld_args:+, ThinLTO jobs=${THINLTO_JOBS} cache=${THINLTO_CACHE_DIR}}" | tee -a "${RELEASE_DIR}/build.log"
+make -j"${JOBS}" "${make_args[@]}" "${targets[@]}" 2>&1 | tee -a "${RELEASE_DIR}/build.log"
 
 image_path="${OUT_DIR}/arch/arm64/boot/Image"
 if [[ ! -s "${image_path}" ]]; then
