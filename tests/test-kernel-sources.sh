@@ -57,6 +57,44 @@ do
   assert_contains "${out}" "ROM_FAMILY=los"
 done
 
+# Evolution-X 6.6: pure GKI Image (Kleaf mixed build), 6.6 SUSFS branch,
+# module-loading compatibility overrides.
+out="$(
+  cd "${tmp_dir}"
+  rm -rf release
+  mkdir -p release
+  KERNEL_SOURCE=evolution-x-6.6 SOURCE_REF='' SUSFS_KERNEL_BRANCH=gki-android12-5.10 \
+    PYTHON="${PYTHON}" bash scripts/resolve-kernel-source.sh >/dev/null
+  cat release/kernel-source.env
+)"
+assert_contains "${out}" "SOURCE_REPO=Evolution-X-Devices/kernel_xiaomi_sm8450"
+assert_contains "${out}" "SOURCE_REF=cnb-6.6"
+assert_contains "${out}" "DEFCONFIG_MODE=single"
+assert_contains "${out}" "DEFCONFIG=gki_defconfig"
+assert_contains "${out}" "KERNEL_VERSION=6.6"
+assert_contains "${out}" "SUSFS_KERNEL_BRANCH=gki-android15-6.6"
+assert_contains "${out}" "CONFIG_DISABLE=MODULE_SIG_PROTECT"
+assert_contains "${out}" "MODULE_ALLOW_BTF_MISMATCH"
+assert_contains "${out}" "DEBUG_INFO_BTF_MODULES"
+assert_contains "${out}" "PACKAGE_FAMILY=LOS"
+if [[ "${out}" == *"CONFIG_FRAGMENTS=vendor"* ]]; then
+  echo "FAIL: evolution-x-6.6 must not apply vendor fragments to the GKI Image" >&2
+  exit 1
+fi
+
+# Presets without a pinned SUSFS branch keep the caller's (5.10) default.
+out="$(
+  cd "${tmp_dir}"
+  rm -rf release
+  mkdir -p release
+  KERNEL_SOURCE=evolution-x SOURCE_REF='' SUSFS_KERNEL_BRANCH=gki-android12-5.10 \
+    PYTHON="${PYTHON}" bash scripts/resolve-kernel-source.sh >/dev/null
+  cat release/kernel-source.env
+)"
+assert_contains "${out}" "SOURCE_REF=cnb"
+assert_contains "${out}" "KERNEL_VERSION=5.10"
+assert_contains "${out}" "SUSFS_KERNEL_BRANCH=gki-android12-5.10"
+
 # Optional source_ref override
 out="$(
   cd "${tmp_dir}"
@@ -109,5 +147,12 @@ assert_name \
   MANAGER=kernelsu-next ENABLE_SUSFS=true \
   manager_build_version_name='v3.2.0' manager_build_version_code=33203 \
   susfs_reported_version=v2.2.0
+
+assert_name \
+  'AK3_marble_LOS_evolution-x-6.6_sukisu-v4.0.0-code40000_susfs-v2.4.0_r9.zip' \
+  KERNEL_SOURCE=evolution-x-6.6 ROM_FAMILY=los \
+  MANAGER=sukisu-ultra ENABLE_SUSFS=true \
+  manager_build_version_name=v4.0.0 manager_build_version_code=40000 \
+  susfs_reported_version=v2.4.0
 
 echo "Kernel source preset tests passed"

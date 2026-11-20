@@ -148,7 +148,7 @@ grep -Fq 'concurrency:' "${wrapper}" || {
   exit 1
 }
 
-for preset in melt lineageos evolution_x aosp_pablo pa_gr; do
+for preset in melt lineageos evolution_x evolution_x_6_6 aosp_pablo pa_gr; do
   grep -Fq "build_source_${preset}:" "${matrix}" || {
     echo "FAIL: matrix workflow missing kernel source checkbox: build_source_${preset}" >&2
     exit 1
@@ -265,6 +265,24 @@ if ! grep -Eq 'Setup swap|swap-size-gb' "${core}"; then
   echo "FAIL: build-core must set up swap for LTO builds" >&2
   exit 1
 fi
+
+# pierotofy/set-swap-space replaces the last `swapon --show` entry, which is
+# /dev/zram0 on current runner images, and fails the job.
+if grep -Fq 'pierotofy/set-swap-space' "${core}"; then
+  echo "FAIL: build-core must not use pierotofy/set-swap-space (breaks on zram runners)" >&2
+  exit 1
+fi
+if grep -Eq 'swapoff|rm .*SWAP_FILE' "${core}"; then
+  echo "FAIL: build-core swap setup must not tear down existing (zram) swap" >&2
+  exit 1
+fi
+
+# 6.6 GKI presets need pahole for DEBUG_INFO_BTF(_MODULES), or struct module
+# changes and every vendor module is rejected.
+grep -Eq '\bdwarves\b' "${core}" || {
+  echo "FAIL: build-core must install dwarves (pahole) for BTF-enabled kernels" >&2
+  exit 1
+}
 
 required_toolchain_patterns=(
   'Restore LLVM 22.1.8'

@@ -21,6 +21,7 @@ source_flags = [
     ("melt", os.environ.get("BUILD_SOURCE_MELT", "false")),
     ("lineageos", os.environ.get("BUILD_SOURCE_LINEAGEOS", "false")),
     ("evolution-x", os.environ.get("BUILD_SOURCE_EVOLUTION_X", "false")),
+    ("evolution-x-6.6", os.environ.get("BUILD_SOURCE_EVOLUTION_X_6_6", "false")),
     ("aosp-pablo", os.environ.get("BUILD_SOURCE_AOSP_PABLO", "false")),
     ("pa-gr", os.environ.get("BUILD_SOURCE_PA_GR", "false")),
 ]

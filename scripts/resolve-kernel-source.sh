@@ -45,9 +45,31 @@ base_defconfig = preset.get("base_defconfig") or ""
 fragments = preset.get("config_fragments") or []
 config_fragments = " ".join(fragments)
 recommended_toolchain = preset.get("recommended_toolchain") or ""
+kernel_version = preset.get("kernel_version") or ""
+# The SUSFS patch set must match the kernel version, so a preset that pins one
+# wins over the caller-supplied default (the matrix always passes 5.10).
+susfs_kernel_branch = (
+    preset.get("susfs_kernel_branch")
+    or os.environ.get("SUSFS_KERNEL_BRANCH", "")
+    or "gki-android12-5.10"
+)
+
+
+def config_list(key):
+    items = preset.get(key) or []
+    for item in items:
+        if not item or not all(c.isalnum() or c == "_" for c in item):
+            print(f"::error::kernel_source {kernel_source} has invalid {key} entry: {item!r}", file=sys.stderr)
+            sys.exit(1)
+    return " ".join(items)
+
+
+config_enable = config_list("config_enable")
+config_disable = config_list("config_disable")
+config_require = config_list("config_require")
 
 rom_family_norm = (rom_family or "").lower()
-if rom_family_norm == "los" or kernel_source in ("lineageos", "evolution-x", "aosp-pablo", "pa-gr"):
+if rom_family_norm == "los" or kernel_source in ("lineageos", "evolution-x", "evolution-x-6.6", "aosp-pablo", "pa-gr"):
     package_family = "LOS"
 else:
     package_family = "MELT"
@@ -100,6 +122,11 @@ values = {
     "CONFIG_FRAGMENTS": config_fragments,
     "RECOMMENDED_TOOLCHAIN": recommended_toolchain,
     "PACKAGE_FAMILY": package_family,
+    "KERNEL_VERSION": kernel_version,
+    "SUSFS_KERNEL_BRANCH": susfs_kernel_branch,
+    "CONFIG_ENABLE": config_enable,
+    "CONFIG_DISABLE": config_disable,
+    "CONFIG_REQUIRE": config_require,
 }
 os.makedirs("release", exist_ok=True)
 with open("release/kernel-source.env", "w", encoding="utf-8") as fh:
@@ -134,6 +161,13 @@ else
   echo "  base_defconfig=${BASE_DEFCONFIG}"
   echo "  fragments=${CONFIG_FRAGMENTS}"
 fi
+echo "  kernel_version=${KERNEL_VERSION:-unknown}"
+echo "  susfs_kernel_branch=${SUSFS_KERNEL_BRANCH}"
+for key in CONFIG_ENABLE CONFIG_DISABLE CONFIG_REQUIRE; do
+  if [[ -n "${!key}" ]]; then
+    echo "  ${key,,}=${!key}"
+  fi
+done
 if [[ -n "${RECOMMENDED_TOOLCHAIN}" ]]; then
   echo "  recommended_toolchain=${RECOMMENDED_TOOLCHAIN}"
   if [[ -n "${TOOLCHAIN:-}" && "${TOOLCHAIN}" != "${RECOMMENDED_TOOLCHAIN}" ]]; then

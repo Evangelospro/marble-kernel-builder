@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The preset's DEFCONFIG (from resolve-kernel-source.sh) must win over the
+# Melt default in config/marble.env.
+_caller_defconfig="${DEFCONFIG:-}"
 source config/marble.env
+DEFCONFIG="${_caller_defconfig:-${DEFCONFIG}}"
 
 KERNEL_DIR="${KERNEL_DIR:-kernel-source}"
 BUILD_SCOPE="${BUILD_SCOPE:-image-only}"
@@ -104,6 +108,10 @@ esac
 
 if [[ "${MANAGER}" != "none" ]]; then
   scripts/config --file "${OUT_DIR}/.config" -e KSU
+else
+  # Trees with an in-tree KernelSU (Kconfig `default y`) would otherwise ship
+  # root in a build labelled "noroot".
+  scripts/config --file "${OUT_DIR}/.config" -d KSU
 fi
 if [[ "${ENABLE_SUSFS}" == "true" ]]; then
   scripts/config --file "${OUT_DIR}/.config" -e KSU_SUSFS
@@ -135,8 +143,47 @@ case "${LTO}" in
     ;;
 esac
 
+# Preset-specific overrides (e.g. GKI 6.6 module-loading compatibility, see
+# config/kernel-sources.json notes). Only options that do not change the KMI.
+# shellcheck disable=SC2206
+config_enable_list=(${CONFIG_ENABLE:-})
+# shellcheck disable=SC2206
+config_disable_list=(${CONFIG_DISABLE:-})
+# shellcheck disable=SC2206
+config_require_list=(${CONFIG_REQUIRE:-})
+for opt in "${config_enable_list[@]}"; do
+  echo "Preset config: enable ${opt}" | tee -a "${RELEASE_DIR}/build.log"
+  scripts/config --file "${OUT_DIR}/.config" -e "${opt}"
+done
+for opt in "${config_disable_list[@]}"; do
+  echo "Preset config: disable ${opt}" | tee -a "${RELEASE_DIR}/build.log"
+  scripts/config --file "${OUT_DIR}/.config" -d "${opt}"
+done
+
 make O="${OUT_DIR}" ARCH="${ARCH}" LLVM=1 LLVM_IAS=1 CC="${CC}" olddefconfig 2>&1 | tee -a "${RELEASE_DIR}/build.log"
 
+config_errors=0
+for opt in "${config_enable_list[@]}" "${config_require_list[@]}"; do
+  if ! grep -q "^CONFIG_${opt}=y$" "${OUT_DIR}/.config"; then
+    echo "::error::CONFIG_${opt} must be =y in the final kernel config but is not."
+    config_errors=1
+  fi
+done
+for opt in "${config_disable_list[@]}"; do
+  if grep -q "^CONFIG_${opt}=y$" "${OUT_DIR}/.config"; then
+    echo "::error::CONFIG_${opt} must be disabled in the final kernel config but is still =y."
+    config_errors=1
+  fi
+done
+if (( config_errors )); then
+  echo "::error::Kernel config does not match what the ROM's vendor modules expect; the Image would bootloop. (DEBUG_INFO_BTF* need pahole >= 1.21 from the dwarves package.)"
+  exit 1
+fi
+
+if [[ "${MANAGER}" == "none" ]] && grep -q '^CONFIG_KSU=y$' "${OUT_DIR}/.config"; then
+  echo "::error::CONFIG_KSU is still enabled in a no-root build"
+  exit 1
+fi
 if [[ "${MANAGER}" != "none" ]] && ! grep -q '^CONFIG_KSU=y$' "${OUT_DIR}/.config"; then
   echo "::error::CONFIG_KSU is not enabled in the final kernel config"
   exit 1

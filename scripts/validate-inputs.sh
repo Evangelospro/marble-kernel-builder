@@ -91,8 +91,17 @@ if [[ "${ENABLE_SUSFS}" == "true" ]]; then
       [[ -z "${MANAGER_REF}" || "${MANAGER_REF}" == "main" ]] || { echo "::error::ReSukiSU + SUSFS requires official ref main"; exit 1; }
       ;;
   esac
-  if [[ "${SUSFS_KERNEL_BRANCH}" != "gki-android12-5.10" ]]; then
-    echo "::error::Marble requires SUSFS_KERNEL_BRANCH=gki-android12-5.10, got ${SUSFS_KERNEL_BRANCH}"
+  case "${SUSFS_KERNEL_BRANCH}" in
+    gki-android12-5.10|gki-android15-6.6) ;;
+    *)
+      echo "::error::Marble supports SUSFS_KERNEL_BRANCH gki-android12-5.10 (5.10 sources) or gki-android15-6.6 (6.6 sources), got ${SUSFS_KERNEL_BRANCH}"
+      exit 1
+      ;;
+  esac
+  # The SUSFS patch set must target the same kernel version as the source tree.
+  KERNEL_VERSION="${KERNEL_VERSION:-}"
+  if [[ -n "${KERNEL_VERSION}" && "${SUSFS_KERNEL_BRANCH}" != *"-${KERNEL_VERSION}" ]]; then
+    echo "::error::SUSFS_KERNEL_BRANCH=${SUSFS_KERNEL_BRANCH} does not match kernel ${KERNEL_VERSION} of kernel_source ${KERNEL_SOURCE}"
     exit 1
   fi
   if [[ "${SUSFS_VERSION}" == "custom" && -z "${SUSFS_REF}" ]]; then

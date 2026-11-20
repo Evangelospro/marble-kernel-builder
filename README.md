@@ -119,12 +119,15 @@ Presets are named after the project that maintains the tree. Selected from the `
 |---|---|---|---|---|
 | **`melt`** | [`mohdakil2426/android_kernel_xiaomi_marble`](https://github.com/mohdakil2426/android_kernel_xiaomi_marble) | `melt-rebase` | `marble_defconfig` | 🟢 Stock **HyperOS** |
 | **`lineageos`** | [`LineageOS/android_kernel_xiaomi_sm8450`](https://github.com/LineageOS/android_kernel_xiaomi_sm8450) | `lineage-23.2` | GKI + fragments | 🟠 **LOS-based** ROMs |
-| **`evolution-x`** | [`Evolution-X-Devices/kernel_xiaomi_sm8450`](https://github.com/Evolution-X-Devices/kernel_xiaomi_sm8450) | `cnb` | GKI + fragments | 🟠 **LOS-based** ROMs |
+| **`evolution-x`** *(legacy 5.10)* | [`Evolution-X-Devices/kernel_xiaomi_sm8450`](https://github.com/Evolution-X-Devices/kernel_xiaomi_sm8450) | `cnb` | GKI + fragments | 🟠 Evolution X builds **still on kernel 5.10** |
+| **`evolution-x-6.6`** | [`Evolution-X-Devices/kernel_xiaomi_sm8450`](https://github.com/Evolution-X-Devices/kernel_xiaomi_sm8450) | `cnb-6.6` | `gki_defconfig` (pure GKI) | 🟠 **Evolution X on kernel 6.6** (current builds) |
 | **`aosp-pablo`** | [`aosp-pablo/android_kernel_xiaomi_sm8450`](https://github.com/aosp-pablo/android_kernel_xiaomi_sm8450) | `16` | GKI + fragments | 🟠 **LOS-based** ROMs |
 | **`pa-gr`** | [`pa-gr/android_kernel_xiaomi_sm8450`](https://github.com/pa-gr/android_kernel_xiaomi_sm8450) | `vauxite` | GKI + fragments | 🟠 **LOS-based** ROMs |
 
 > [!WARNING]
 > **ROM family is not interchangeable.** A `melt` build is for **stock HyperOS**. The four LOS-family builds are for **LineageOS-based custom ROMs only**. Flashing across families is the most common way to bootloop this device.
+>
+> **Kernel version must match too.** Current Evolution X builds for marble run **kernel 6.6** (check *Settings → About phone → Kernel version*). Flashing the 5.10 `evolution-x` build on them bootloops, because the ROM's vendor modules are built for 6.6 and can't load. Use **`evolution-x-6.6`**. The flasher now checks this and refuses a mismatched kernel series.
 
 <details>
 <summary><b>How the two defconfig modes differ</b></summary>
@@ -190,7 +193,7 @@ Only **official upstream** manager repositories are allowlisted at CI time. Rand
 
 <br/>
 
-Kernel branch `gki-android12-5.10`, from [`simonpunk/susfs4ksu`](https://gitlab.com/simonpunk/susfs4ksu):
+Kernel branch `gki-android12-5.10` (5.10 sources) or `gki-android15-6.6` (selected automatically for `evolution-x-6.6`), from [`simonpunk/susfs4ksu`](https://gitlab.com/simonpunk/susfs4ksu):
 
 | Preset | Target | Description |
 |---|---|---|
@@ -258,7 +261,8 @@ flowchart LR
 |---|---|---|
 | `build_source_melt` | `true` | Source: Melt (Stock HyperOS) |
 | `build_source_lineageos` | `false` | Source: LineageOS (LOS ROMs) |
-| `build_source_evolution_x` | `false` | Source: Evolution-X (LOS ROMs) |
+| `build_source_evolution_x` | `false` | Source: Evolution-X 5.10 (legacy, kernel 5.10 Evo builds only) |
+| `build_source_evolution_x_6_6` | `false` | Source: Evolution-X 6.6 (current Evolution X, kernel 6.6) |
 | `build_source_aosp_pablo` | `false` | Source: aosp-pablo (LOS ROMs) |
 | `build_source_pa_gr` | `false` | Source: pa-gr (LOS ROMs) |
 | `build_source_all` | `false` | Build ALL 5 kernel sources at once |

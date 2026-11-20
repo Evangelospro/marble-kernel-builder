@@ -31,7 +31,7 @@
     "notes": "Official LineageOS SM8450 kernel (Poco F5 / marble). Custom LOS-based ROMs only. Needs llvm-22.1.8 (armv9 flags)."
   },
   "evolution-x": {
-    "display": "Evolution-X",
+    "display": "Evolution-X 5.10 (legacy)",
     "author": "Evolution-X",
     "repo": "Evolution-X-Devices/kernel_xiaomi_sm8450",
     "default_ref": "cnb",
@@ -47,7 +47,25 @@
       "vendor/debugfs.config"
     ],
     "recommended_toolchain": "llvm-22.1.8",
-    "notes": "Evolution-X device org SM8450 kernel for marble. Prefer clean branches without in-tree KSU. Needs llvm-22.1.8 (armv9 flags)."
+    "kernel_version": "5.10",
+    "notes": "LEGACY Evolution-X 5.10 kernel (branch cnb). Only for Evolution X builds that still ship kernel 5.10. Current Evolution X marble builds use kernel 6.6: pick evolution-x-6.6 instead, or the phone will bootloop. Needs llvm-22.1.8 (armv9 flags)."
+  },
+  "evolution-x-6.6": {
+    "display": "Evolution-X 6.6",
+    "author": "Evolution-X",
+    "repo": "Evolution-X-Devices/kernel_xiaomi_sm8450",
+    "default_ref": "cnb-6.6",
+    "rom_label": "Evolution-X (kernel 6.6)",
+    "rom_family": "los",
+    "rom_support": "Evolution X builds running kernel 6.6 only",
+    "defconfig_mode": "single",
+    "defconfig": "gki_defconfig",
+    "recommended_toolchain": "llvm-22.1.8",
+    "kernel_version": "6.6",
+    "susfs_kernel_branch": "gki-android15-6.6",
+    "config_disable": ["MODULE_SIG_PROTECT"],
+    "config_require": ["MODVERSIONS", "MODULE_SIG", "DEBUG_INFO_BTF", "DEBUG_INFO_BTF_MODULES", "MODULE_ALLOW_BTF_MISMATCH"],
+    "notes": "Evolution X kernel 6.6 (branch cnb-6.6). The ROM uses a Kleaf mixed build: boot.img carries the pure GKI kernel_aarch64 Image (gki_defconfig, no vendor fragments), and vendor/system_dlkm modules are built against its KMI. So the Image must be plain gki_defconfig. MODULE_SIG_PROTECT is disabled because a self-built Image cannot verify the ROM's signed system_dlkm GKI modules, which would then be refused (-EACCES) when they export protected symbols. MODULE_ALLOW_BTF_MISMATCH (set by gki_defconfig) is required because our vmlinux BTF can't match the ROM's byte for byte. DEBUG_INFO_BTF_MODULES must stay on (needs pahole >= 1.21) or struct module changes and every vendor module is rejected. The tree ships KernelSU-Next in drivers/kernelsu; it is removed before a manager's setup.sh runs, otherwise the selected manager is silently ignored."
   },
   "aosp-pablo": {
     "display": "aosp-pablo",

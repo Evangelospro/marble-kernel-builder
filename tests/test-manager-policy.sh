@@ -87,6 +87,15 @@ if SOURCE_REPO=owner/repo SOURCE_REF=main MANAGER=kernelsu-next ENABLE_SUSFS=tru
    SUSFS_KERNEL_BRANCH=gki-android14-6.1 bash scripts/validate-inputs.sh >/dev/null 2>&1; then
   fail "validation accepted a non-Marble SUSFS patch family"
 fi
+SOURCE_REPO=owner/repo SOURCE_REF=cnb-6.6 MANAGER=sukisu-ultra ENABLE_SUSFS=true \
+  KERNEL_VERSION=6.6 SUSFS_KERNEL_BRANCH=gki-android15-6.6 \
+  bash scripts/validate-inputs.sh >/dev/null ||
+  fail "validation rejected the 6.6 SUSFS patch family for a 6.6 source"
+if SOURCE_REPO=owner/repo SOURCE_REF=cnb-6.6 MANAGER=sukisu-ultra ENABLE_SUSFS=true \
+   KERNEL_VERSION=6.6 SUSFS_KERNEL_BRANCH=gki-android12-5.10 \
+   bash scripts/validate-inputs.sh >/dev/null 2>&1; then
+  fail "validation accepted 5.10 SUSFS patches for a 6.6 kernel source"
+fi
 "${PYTHON}" - <<'PY'
 import json
 
