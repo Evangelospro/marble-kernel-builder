@@ -30,6 +30,8 @@ case "${TOOLCHAIN}" in
 esac
 
 echo "TOOLCHAIN=${TOOLCHAIN}"
+mkdir -p release
+echo "TOOLCHAIN=${TOOLCHAIN}" > release/toolchain.env
 if [[ -n "${GITHUB_ENV:-}" ]]; then
   echo "TOOLCHAIN=${TOOLCHAIN}" >> "${GITHUB_ENV}"
 fi
