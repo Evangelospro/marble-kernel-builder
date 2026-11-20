@@ -162,20 +162,23 @@ until [ "$(getprop sys.boot_completed)" = 1 ] && pm path android >/dev/null 2>&1
   i=$((i + 1)); [ $i -gt 120 ] && { echo "package manager not ready"; exit 0; }
   sleep 1
 done
+# Always install the staged build: it is the exact one matching the kernel
+# (an already installed older/newer app is replaced, downgrades included).
 tmp=/data/local/tmp/marble-manager.apk
-if ! pm path "$pkg" >/dev/null 2>&1; then
-  cp -f "$P/manager.apk" $tmp && chmod 644 $tmp
-  out="$(pm install -r $tmp 2>&1)"; echo "install: $out"
-  case "$out" in
-    *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*"signatures do not match"*)
-      pm uninstall "$pkg"; out="$(pm install -r $tmp 2>&1)"; echo "reinstall: $out" ;;
-  esac
-  rm -f $tmp
-fi
-if ! pm path "$pkg" >/dev/null 2>&1; then
-  echo "app still missing; will retry next boot"
-  exit 0
-fi
+cp -f "$P/manager.apk" $tmp && chmod 644 $tmp
+out="$(pm install -r -d $tmp 2>&1)"; echo "install: $out"
+case "$out" in
+  *Success*) ;;
+  *)
+    # Signature or downgrade refusal: replace the app (its data is disposable;
+    # root state lives in /data/adb).
+    pm uninstall "$pkg"; out="$(pm install -r $tmp 2>&1)"; echo "reinstall: $out" ;;
+esac
+rm -f $tmp
+case "$out" in
+  *Success*) ;;
+  *) echo "app install failed; will retry next boot"; exit 0 ;;
+esac
 for other in $(cat $P/other-packages 2>/dev/null); do
   [ "$other" = "$pkg" ] && continue
   pm path "$other" >/dev/null 2>&1 && pm uninstall --user 0 "$other" && echo "removed $other"
@@ -208,15 +211,17 @@ marble_install_app_now() {
   pm=/system/bin/pm;
   tmp_apk=/data/local/tmp/marble-manager.apk;
   cp -f $AKHOME/manager.apk $tmp_apk && chmod 644 $tmp_apk;
-  out="$($pm install -r $tmp_apk 2>&1)";
+  out="$($pm install -r -d $tmp_apk 2>&1)";
   case "$out" in
-    *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*signatures\ do\ not\ match*)
-      ui_print "  existing app has a different signature; replacing it";
+    *Success*) ;;
+    *)
+      # Signature or downgrade refusal: replace it with the matching build.
+      ui_print "  replacing the installed app with the matching build";
       $pm uninstall $pkg >/dev/null 2>&1;
       out="$($pm install -r $tmp_apk 2>&1)";;
   esac;
   rm -f $tmp_apk;
-  if ! $pm path $pkg >/dev/null 2>&1; then
+  if ! echo "$out" | grep -q Success || ! $pm path $pkg >/dev/null 2>&1; then
     ui_print "  app install failed now: $(echo "$out" | tail -n 1)";
     return 1;
   fi;
@@ -285,24 +290,20 @@ setup_manager() {
   echo "$new_mgr" > $marker;
 
   if [ "$new_mgr" != none ]; then
-    ksud_fresh="";
-    if [ ! -e $MARBLE_ADB/ksud ]; then
-      if marble_install_ksud; then
-        ksud_fresh=1;
-        ui_print "Installed ${new_mgr} ksud (root works from first boot)";
-      else
-        ui_print "No ${new_mgr} ksud bundled: open the ${new_mgr} app after boot.";
-      fi;
-    fi;
-    if [ "$switched" ] || [ "$ksud_fresh" ] || [ -d $MARBLE_PENDING ]; then
-      if [ "$ksud_fresh" ] || [ -e $MARBLE_ADB/ksud ]; then
-        marble_stage_first_boot "$pkg" &&
-          ui_print "First boot will install the ${new_mgr} app and remove other managers.";
-      fi;
+    ver="$(cat $AKHOME/marble-manager-version 2>/dev/null)";
+    # The bundled ksud + app are the exact build of the manager commit this
+    # kernel was built from, so they always replace whatever is installed.
+    if marble_install_ksud; then
+      ui_print "Installed ${new_mgr} ksud ${ver} (matches this kernel)";
+      marble_stage_first_boot "$pkg" &&
+        ui_print "First boot installs the ${new_mgr} app ${ver} and removes other managers.";
       if marble_android_running && [ -f $AKHOME/manager.apk ]; then
-        ui_print "Installing ${new_mgr} manager app now...";
+        ui_print "Installing ${new_mgr} manager app ${ver} now...";
         marble_install_app_now "$pkg";
       fi;
+    else
+      ui_print "No exact ${new_mgr} build bundled: install the ${new_mgr}";
+      ui_print "app matching this kernel yourself after boot.";
     fi;
     [ "$switched" ] && [ -s "$bak/disabled-modules.txt" ] &&
       ui_print "Re-enable your modules in the ${new_mgr} app after booting.";

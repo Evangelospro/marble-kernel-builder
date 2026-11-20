@@ -19,6 +19,10 @@ manager_repo=""
 manager_effective_ref=""
 manager_commit=""
 manager_tag=""
+manager_apk_repo=""
+manager_apk_artifact_id=""
+manager_apk_run_id=""
+manager_apk_commit=""
 manager_setup_path=""
 susfs_effective_ref=""
 susfs_commit=""
@@ -51,6 +55,18 @@ if [[ "${MANAGER}" != "none" ]]; then
   if [[ -z "${manager_commit}" ]]; then
     echo "::error::Could not resolve official manager ref ${manager_repo}@${manager_effective_ref}"
     exit 1
+  fi
+
+  # The zip installs the manager app and its ksud, which must be the *exact*
+  # build of the commit the kernel uses (both derive their version code from
+  # the commit count, and the kernel only accepts the production signature).
+  # So pick the newest commit on the ref that has a successful, production-
+  # signed official CI build, and build the kernel from that same commit.
+  eval "$(MANAGER="${MANAGER}" MANAGER_REPO="${manager_repo}" MANAGER_REF="${manager_effective_ref}" \
+    MANAGER_COMMIT="${manager_commit}" bash scripts/resolve-manager-build.sh)"
+  if [[ -n "${manager_apk_artifact_id}" && "${manager_apk_commit}" != "${manager_commit}" ]]; then
+    echo "::notice::${manager_repo}@${manager_effective_ref} head ${manager_commit:0:12} has no official manager build yet; using ${manager_apk_commit:0:12}, the newest commit with one, so kernel and app match exactly"
+    manager_commit="${manager_apk_commit}"
   fi
 
   # Resolve the nearest git tag for this commit (for human-readable version display).
@@ -123,6 +139,9 @@ fi
   echo "manager_commit=${manager_commit}"
   echo "manager_tag=${manager_tag}"
   echo "manager_setup_path=${manager_setup_path}"
+  echo "manager_apk_repo=${manager_apk_repo}"
+  echo "manager_apk_artifact_id=${manager_apk_artifact_id}"
+  echo "manager_apk_run_id=${manager_apk_run_id}"
   echo "enable_susfs=${ENABLE_SUSFS}"
   echo "susfs_version=${SUSFS_VERSION}"
   echo "susfs_kernel_branch=${SUSFS_KERNEL_BRANCH}"

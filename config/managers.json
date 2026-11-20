@@ -15,7 +15,6 @@
     "susfs_ref": "",
     "status": "stable-no-susfs",
     "notes": "Official KernelSU. SUSFS is disabled because current official refs do not accept the upstream generic SUSFS manager patch.",
-    "apk_repo": "tiann/KernelSU",
     "package": "me.weishu.kernelsu"
   },
   "kernelsu-next": {
@@ -26,9 +25,14 @@
     "susfs_ref": "dev-susfs",
     "setup_path": "kernel/setup.sh",
     "status": "official-default-forked-susfs",
-    "notes": "Official dev branch for non-SUSFS builds. SUSFS builds use pershoot/KernelSU-Next@dev-susfs, a fork branch based on official dev with SUSFS integration. The manager APK always comes from official KernelSU-Next releases (signature the kernel accepts), also for the SUSFS fork.",
-    "apk_repo": "KernelSU-Next/KernelSU-Next",
-    "package": "com.rifsxd.ksunext"
+    "notes": "Official dev branch for non-SUSFS builds. SUSFS builds use pershoot/KernelSU-Next@dev-susfs, a fork branch based on official dev with SUSFS integration.",
+    "package": "com.rifsxd.ksunext",
+    "apk_build": {
+      "repo": "KernelSU-Next/KernelSU-Next",
+      "workflow": "build-manager-ci.yml",
+      "artifact": "manager",
+      "notes": "Pushes to dev upload a production-signed 'manager' artifact. Not used for SUSFS builds: pershoot's fork commits have no official-signed app."
+    }
   },
   "sukisu-ultra": {
     "display": "SukiSU Ultra",
@@ -38,7 +42,6 @@
     "setup_path": "kernel/setup.sh",
     "status": "official",
     "notes": "Official main branch without SUSFS; official builtin branch is selected automatically when SUSFS is enabled.",
-    "apk_repo": "SukiSU-Ultra/SukiSU-Ultra",
     "package": "com.sukisu.ultra"
   },
   "resukisu": {
@@ -49,7 +52,12 @@
     "setup_path": "kernel/setup.sh",
     "status": "official",
     "notes": "Official main branch includes manager-side SUSFS support.",
-    "apk_repo": "ReSukiSU/ReSukiSU",
-    "package": "com.resukisu.resukisu"
+    "package": "com.resukisu.resukisu",
+    "apk_build": {
+      "repo": "Baka-SU/BakaSU",
+      "workflow": "build-manager.yml",
+      "artifact": "Manager-release",
+      "notes": "ReSukiSU/ReSukiSU redirects here. Pushes to main build a production-signed Manager-release artifact (PR builds use a throwaway key)."
+    }
   }
 }

@@ -25,6 +25,7 @@ echo com.resukisu.resukisu > "${ak}/marble-manager-package"
 printf '%s\n' me.weishu.kernelsu com.rifsxd.ksunext com.sukisu.ultra > "${ak}/marble-other-manager-packages"
 echo apk > "${ak}/manager.apk"
 printf '#!/bin/sh\necho new-ksud\n' > "${ak}/ksud"
+echo "v4.2.0-rc3 (35262)" > "${ak}/marble-manager-version"
 
 # Installed app's native libs (used by the hook for `ksud install`)
 printf '#!/bin/sh\necho "ksud $*" >> "%s/ksud-install.log"\n' "${tmp_dir}" > "${tmp_dir}/app/lib/arm64/libksud.so"
@@ -124,14 +125,31 @@ grep -qx com.resukisu.resukisu "${tmp_dir}/installed" || fail "D: app not instal
 ! grep -qx com.rifsxd.ksunext "${tmp_dir}/installed" || fail "D: old manager app not removed"
 [[ -x "${hook}" ]] || fail "D: hook not staged to finish ksud install"
 
-# ── E: reflashing the same manager is a no-op ──
+# ── E: reflashing the same manager (e.g. a newer build) installs the exact
+#       bundled ksud + app, but does not back up or disable modules ──
 reset_adb
 echo resukisu > "${adb}/.marble-manager"
-echo current-ksud > "${adb}/ksud"
+echo older-resukisu-ksud > "${adb}/ksud"
+printf '%s\n' com.resukisu.resukisu > "${tmp_dir}/installed"
 flash recovery > "${tmp_dir}/outE"
-[[ "$(cat "${adb}/ksud")" == current-ksud ]] || fail "E: existing ksud replaced"
-[[ ! -e "${adb}/marble-backup" && ! -e "${hook}" ]] || fail "E: same-manager reflash changed things"
+cmp -s "${ak}/ksud" "${adb}/ksud" || fail "E: older ksud of the same manager not replaced by the exact build"
+[[ -x "${hook}" ]] || fail "E: exact app build not staged"
+[[ ! -e "${adb}/marble-backup" ]] || fail "E: same-manager reflash made a backup"
 [[ ! -e "${adb}/modules/modA/disable" ]] || fail "E: modules disabled on same-manager reflash"
+grep -q 'v4.2.0-rc3 (35262)' "${tmp_dir}/outE" || fail "E: version not reported"
+# The hook must reinstall although the app is already installed (other version).
+run_hook
+grep -q '^pm install -r -d ' "${tmp_dir}/pm.log" || fail "E: hook skipped installing over an existing app"
+[[ ! -e "${hook}" ]] || fail "E: hook did not finish"
+
+# ── F: no exact build bundled -> nothing installed, old userspace still retired ──
+reset_adb
+rm -f "${ak}/ksud" "${ak}/manager.apk"
+flash recovery > "${tmp_dir}/outF"
+[[ ! -e "${adb}/ksud" ]] || fail "F: a ksud was installed without an exact build"
+[[ ! -e "${hook}" ]] || fail "F: hook staged without an app"
+[[ -n "$(find "${adb}/marble-backup" -name ksud)" ]] || fail "F: foreign ksud not moved aside"
+grep -q 'No exact resukisu build bundled' "${tmp_dir}/outF" || fail "F: missing notice"
 
 grep -q "will retry next boot" "${tmp_dir}/logC" || fail "C: hook log missing retry note"
 

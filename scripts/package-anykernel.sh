@@ -157,6 +157,8 @@ cp "${image_path}" "${work_dir}/ak3/Image"
 if [[ -s "${release_dir}/manager.apk" && -s "${release_dir}/manager-apk.env" ]]; then
   cp "${release_dir}/manager.apk" "${work_dir}/ak3/manager.apk"
   sed -n 's/^manager_package=//p' "${release_dir}/manager-apk.env" > "${work_dir}/ak3/marble-manager-package"
+  printf '%s (%s)\n' "$(sed -n 's/^manager_apk_version_name=//p' "${release_dir}/manager-apk.env")" \
+    "$(sed -n 's/^manager_apk_version_code=//p' "${release_dir}/manager-apk.env")" > "${work_dir}/ak3/marble-manager-version"
   # The manager's own ksud (shipped in the APK as a native library). The zip
   # installs it as /data/adb/ksud so the new kernel never runs another fork's
   # ksud and root works from the first boot.
