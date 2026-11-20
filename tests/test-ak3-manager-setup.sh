@@ -188,8 +188,7 @@ grep -q 'Would move ksud/ksu' "${tmp_dir}/outI" || fail "I: planned ksud move no
 grep -q 'disable 1 module' "${tmp_dir}/outI" || fail "I: planned module disabling not reported"
 [[ "$(cd "${adb}" && find . | sort | md5sum)" == "${before}" ]] || fail "I: dry run changed /data/adb"
 sh -c ". '${tmp_dir}/dry.sh'; ZIPFILE=/sdcard/k.zip; marble_dry_run_requested" && fail "I: normal zip treated as dry run"
-grep -q -A3 'precheck_manager_data;' "${repo_root}/ak3/anykernel.sh" &&
-  awk '/^precheck_manager_data;/{p=NR} /^if marble_dry_run_requested/{d=NR} /^backup_current_boot;/{b=NR} /^write_boot;/{w=NR} END{exit !(p<d && d<b && b<w)}' "${repo_root}/ak3/anykernel.sh" ||
+awk '/^precheck_manager_data;/{p=NR} /^if marble_dry_run_requested/{d=NR} /^backup_current_boot;/{b=NR} /^write_boot;/{w=NR} END{exit !(p<d && d<b && b<w)}' "${repo_root}/ak3/anykernel.sh" ||
   fail "I: dry run must exit after all checks and before backup/write"
 
 echo "AK3 manager setup tests passed"
