@@ -128,7 +128,7 @@ Presets are named after the project that maintains the tree. Selected from the `
 > [!WARNING]
 > **ROM family is not interchangeable.** A `melt` build is for **stock HyperOS**. The four LOS-family builds are for **LineageOS-based custom ROMs only**. Flashing across families is the most common way to bootloop this device.
 >
-> **Kernel version must match too.** Current Evolution X builds for marble run **kernel 6.6** (check *Settings → About phone → Kernel version*). A 5.10 kernel on them bootloops, because the ROM's vendor modules are built for 6.6 and can't load. The flasher checks this and refuses a mismatched kernel series.
+> **The kernel must match your exact ROM build.** The ROM's vendor modules are built against its own kernel (series *and* commit); anything else can bootloop. Check *Settings → About phone → Kernel version*: e.g. official Evolution X `17.0-20261112` runs `5.10.269-gki-g658b84f13496`. Each build therefore **targets a ROM** (`rom_url`, default: the source's official latest build): it builds that ROM kernel's exact commit and **fails unless every one of the ROM's kernel modules would load** (same config, identical symbol CRCs and `struct module` layout). The zip itself also refuses to flash if the boot slot's kernel series or commit differs.
 
 <details>
 <summary><b>How the two defconfig modes differ</b></summary>
@@ -266,7 +266,8 @@ flowchart LR
 | `build_source_aosp_pablo` | `false` | Source: aosp-pablo (LOS ROMs) |
 | `build_source_pa_gr` | `false` | Source: pa-gr (LOS ROMs) |
 | `build_source_all` | `false` | Build ALL 5 kernel sources at once |
-| `source_ref` | *(empty)* | Override branch/tag/commit (empty = each repo's default branch) |
+| `rom_url` | *(empty)* | ROM zip to build for and verify against (empty = the source's official latest, e.g. Evolution X OTA feed; `none` = skip verification) |
+| `source_ref` | *(empty)* | Override branch/tag/commit (empty = the target ROM kernel's exact commit, else the repo default branch) |
 | `build_none` | `false` | Baseline no-root kernel |
 | `build_kernelsu` | `false` | KernelSU (no SUSFS) |
 | `build_kernelsu_next` | `false` | KernelSU-Next |

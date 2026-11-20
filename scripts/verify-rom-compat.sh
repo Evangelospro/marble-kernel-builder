@@ -87,7 +87,7 @@ if [[ ! -s "${symvers}" ]]; then
   echo "::error::No vmlinux.symvers/Module.symvers in ${out}: cannot verify module CRCs"
   fail=1
 elif ! python3 -I scripts/lib/rom_modcheck.py --vmlinux "${out}/vmlinux" --symvers "${symvers}" \
-     --report "${report}.modules" "${ROM_DIR}/modules"; then
+     --report "${report}.modules" --profile "${ROM_DIR}/profile.json"; then
   echo "::error::Some of ${rom_target}'s kernel modules would not load on this kernel (see rom-compat.txt)"
   fail=1
 fi

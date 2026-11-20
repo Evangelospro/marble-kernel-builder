@@ -95,6 +95,7 @@ cp "${repo_root}/config/marble.env" "${w}/config/"
 cp "${repo_root}/scripts/verify-rom-compat.sh" "${w}/scripts/"
 cp "${repo_root}/scripts/lib/rom_modcheck.py" "${repo_root}/scripts/lib/rom_extract.py" "${w}/scripts/lib/"
 cp -r "${tmp_dir}/rom-good" "${w}/rom/modules/good"
+python3 -I "${repo_root}/scripts/lib/rom_modcheck.py" --dump-profile "${w}/rom/profile.json" "${w}/rom/modules" >/dev/null
 cp "${tmp_dir}/vmlinux" "${tmp_dir}/vmlinux.symvers" "${w}/k/out/"
 cp "${tmp_dir}/vmlinux" "${w}/k/out/arch/arm64/boot/Image"
 cat > "${w}/release/rom-target.env" <<'EOF'
@@ -149,5 +150,21 @@ expect_abort 6.6.144-4k-g32cd81a28c49-dirty 5.10.269-gki-g658b84f13496 k.zip || 
 expect_abort 5.10.269-gki-gaaaaaaaaaaaa-dirty 5.10.269-gki-g658b84f13496 k.zip || fail "commit mismatch not refused"
 expect_abort 5.10.269-gki-g658b84f13496-dirty "" k.zip || fail "unreadable ROM kernel not refused"
 ak_run 6.6.144-4k-g32cd81a28c49-dirty 5.10.269-gki-g658b84f13496 k-force.zip || fail "force flash ignored"
+
+# Profile mode gives the same verdicts as checking the module files directly.
+python3 -I "${repo_root}/scripts/lib/rom_modcheck.py" --dump-profile "${tmp_dir}/crc.json" "${tmp_dir}/rom-crc" >/dev/null
+if PATH="${tmp_dir}/bin:${PATH}" python3 -I "${repo_root}/scripts/lib/rom_modcheck.py" --vmlinux "${tmp_dir}/vmlinux" \
+   --symvers "${tmp_dir}/vmlinux.symvers" --report "${tmp_dir}/p.txt" --profile "${tmp_dir}/crc.json" >/dev/null; then
+  fail "profile check accepted a CRC mismatch"
+fi
+grep -q 'CRC 0xdeadbeef' "${tmp_dir}/p.txt" || fail "profile check did not report the CRC mismatch"
+
+# The committed profile of the official Evolution X build is well formed.
+for d in "${repo_root}"/rom-profiles/*/; do
+  [[ -s "${d}profile.json.gz" && -s "${d}stock.config.gz" && -s "${d}rom.env" ]] || fail "incomplete ROM profile ${d}"
+  gzip -dc "${d}profile.json.gz" | python3 -c 'import json,sys; p=json.load(sys.stdin); assert p["format"]==1 and p["modules"]' ||
+    fail "bad profile.json in ${d}"
+  grep -q '^rom_kernel_commit=[0-9a-f]\{12\}$' "${d}rom.env" || fail "rom.env lacks the kernel commit in ${d}"
+done
 
 echo "ROM compat tests passed"

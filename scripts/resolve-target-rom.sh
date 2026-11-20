@@ -8,6 +8,11 @@
 #
 # ROM selection: ROM_URL (workflow input rom_url) if set; "none" skips;
 # otherwise the preset's official OTA feed (config/kernel-sources.json rom_ota).
+#
+# If the ROM host refuses the download (some CDNs block CI runners), a
+# committed profile in rom-profiles/<rom file>/ is used instead: the same
+# requirements (module imports/CRCs, struct module size, vermagic, kernel
+# config and release) extracted earlier from that exact ROM.
 set -euo pipefail
 
 KERNEL_SOURCE="${KERNEL_SOURCE:-melt}"
@@ -44,36 +49,57 @@ echo "  url: ${ROM_URL}"
 
 rm -rf "${ROM_DIR}"
 mkdir -p "${ROM_DIR}/img" "${ROM_DIR}/modules"
-python3 -I scripts/lib/remote_payload.py "${ROM_URL}" "${ROM_DIR}/img" boot vendor_boot vendor_dlkm system_dlkm
-
-[[ -s "${ROM_DIR}/img/boot.img" ]] || { echo "::error::ROM has no boot partition in its payload"; exit 1; }
-python3 -I scripts/lib/rom_extract.py kernel "${ROM_DIR}/img/boot.img" "${ROM_DIR}/stock-kernel"
-rom_release="$(python3 -I scripts/lib/rom_extract.py release "${ROM_DIR}/stock-kernel")"
-python3 -I scripts/lib/rom_extract.py ikconfig "${ROM_DIR}/stock-kernel" "${ROM_DIR}/stock.config" ||
-  echo "::warning::ROM kernel has no embedded config; config comparison skipped"
-rom_series="$(sed -n 's/^\([0-9]*\.[0-9]*\).*/\1/p' <<<"${rom_release}")"
-rom_commit="$(sed -n 's/^.*-g\([0-9a-f]\{12\}\).*$/\1/p' <<<"${rom_release}")"
-echo "ROM kernel: ${rom_release:-unknown}"
-
-if [[ -s "${ROM_DIR}/img/vendor_boot.img" ]]; then
-  python3 -I scripts/lib/rom_extract.py vendor-ramdisks "${ROM_DIR}/img/vendor_boot.img" "${ROM_DIR}/modules/vendor_boot"
-fi
-for part in vendor_dlkm system_dlkm; do
-  img="${ROM_DIR}/img/${part}.img"
-  [[ -s "${img}" ]] || continue
-  dest="${ROM_DIR}/modules/${part}"
-  mkdir -p "${dest}"
-  if debugfs -R 'stats' "${img}" >/dev/null 2>&1; then
-    debugfs -R "rdump / ${dest}" "${img}" >/dev/null 2>&1
-  elif command -v fsck.erofs >/dev/null 2>&1; then
-    fsck.erofs --extract="${dest}" "${img}" >/dev/null
-  else
-    echo "::error::${part} is neither ext4 nor extractable erofs (install erofs-utils)"
+profile_dir="rom-profiles/${rom_file}"
+if ! python3 -I scripts/lib/remote_payload.py "${ROM_URL}" "${ROM_DIR}/img" boot vendor_boot vendor_dlkm system_dlkm; then
+  if [[ ! -s "${profile_dir}/profile.json.gz" ]]; then
+    echo "::error::Could not download ${rom_file} and there is no committed profile in ${profile_dir}; cannot verify the kernel against your ROM (set rom_url to a reachable copy, or rom_url=none to build unverified)"
     exit 1
   fi
-done
-module_count="$(find "${ROM_DIR}/modules" -name '*.ko' | wc -l)"
-echo "ROM kernel modules: ${module_count}"
+  echo "::notice::ROM download refused; using the committed profile of ${rom_file}"
+  gzip -dc "${profile_dir}/profile.json.gz" > "${ROM_DIR}/profile.json"
+  gzip -dc "${profile_dir}/stock.config.gz" > "${ROM_DIR}/stock.config"
+  # shellcheck disable=SC1091
+  source "${profile_dir}/rom.env"
+  rom_release="${rom_kernel_release}"
+  rom_series="${rom_kernel_series}"
+  rom_commit="${rom_kernel_commit}"
+  module_count="${rom_module_count}"
+  echo "ROM kernel: ${rom_release} (profile)"
+fi
+
+if [[ ! -s "${ROM_DIR}/profile.json" ]]; then
+  [[ -s "${ROM_DIR}/img/boot.img" ]] || { echo "::error::ROM has no boot partition in its payload"; exit 1; }
+  python3 -I scripts/lib/rom_extract.py kernel "${ROM_DIR}/img/boot.img" "${ROM_DIR}/stock-kernel"
+  rom_release="$(python3 -I scripts/lib/rom_extract.py release "${ROM_DIR}/stock-kernel")"
+  python3 -I scripts/lib/rom_extract.py ikconfig "${ROM_DIR}/stock-kernel" "${ROM_DIR}/stock.config" ||
+    echo "::warning::ROM kernel has no embedded config; config comparison skipped"
+  rom_series="$(sed -n 's/^\([0-9]*\.[0-9]*\).*/\1/p' <<<"${rom_release}")"
+  rom_commit="$(sed -n 's/^.*-g\([0-9a-f]\{12\}\).*$/\1/p' <<<"${rom_release}")"
+  echo "ROM kernel: ${rom_release:-unknown}"
+
+  if [[ -s "${ROM_DIR}/img/vendor_boot.img" ]]; then
+    python3 -I scripts/lib/rom_extract.py vendor-ramdisks "${ROM_DIR}/img/vendor_boot.img" "${ROM_DIR}/modules/vendor_boot"
+  fi
+  for part in vendor_dlkm system_dlkm; do
+    img="${ROM_DIR}/img/${part}.img"
+    [[ -s "${img}" ]] || continue
+    dest="${ROM_DIR}/modules/${part}"
+    mkdir -p "${dest}"
+    if debugfs -R 'stats' "${img}" >/dev/null 2>&1; then
+      debugfs -R "rdump / ${dest}" "${img}" >/dev/null 2>&1
+    elif command -v fsck.erofs >/dev/null 2>&1; then
+      fsck.erofs --extract="${dest}" "${img}" >/dev/null
+    else
+      echo "::error::${part} is neither ext4 nor extractable erofs (install erofs-utils)"
+      exit 1
+    fi
+  done
+  module_count="$(find "${ROM_DIR}/modules" -name '*.ko' | wc -l)"
+  echo "ROM kernel modules: ${module_count}"
+  # Same requirements as a reusable profile (commit it to rom-profiles/<rom file>/
+  # to keep verifying this ROM if its host later blocks CI downloads).
+  python3 -I scripts/lib/rom_modcheck.py --dump-profile "${ROM_DIR}/profile.json" "${ROM_DIR}/modules"
+fi
 
 {
   echo "rom_target=${rom_file}"
