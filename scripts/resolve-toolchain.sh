@@ -22,7 +22,7 @@ if [[ "${TOOLCHAIN}" == "auto" || -z "${TOOLCHAIN}" ]]; then
 fi
 
 case "${TOOLCHAIN}" in
-  android-r416183b|llvm-22.1.8) ;;
+  android-r416183b|llvm-22.1.8|clang-18) ;;
   *)
     echo "::error::Unsupported TOOLCHAIN=${TOOLCHAIN}" >&2
     exit 1

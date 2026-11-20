@@ -399,6 +399,39 @@ Each step proves one new variable. Verify before moving on.
 > [!CAUTION]
 > **Bootloop recovery** — flash the stock `boot.img` from the **same ROM build** back to the active slot. On A/B devices make sure you target the correct slot (or both). This is why the backup above is not optional.
 
+<details>
+<summary><b>Test a new kernel without flashing it (recommended for a first build on a ROM)</b></summary>
+
+<br/>
+
+`fastboot boot` runs a boot image once from RAM. If it hangs, a forced reboot (hold **Power + Vol−**) brings back your installed kernel, and no slot or retry counter is touched.
+
+```sh
+# Stock boot.img from your exact ROM build; Image from the AK3 zip
+magiskboot unpack boot.img          # magiskboot: from the Magisk APK (lib/<arch>/libmagiskboot.so)
+cp /path/to/Image kernel
+magiskboot repack boot.img test-boot.img
+fastboot boot test-boot.img
+```
+
+If it hangs, grab the kernel log of that attempt: force-reboot into **recovery** (stock kernel) right away, then `adb pull /sys/fs/pstore/` (the `console-ramoops*` file holds the log of the failed boot).
+</details>
+
+<details>
+<summary><b>Phone keeps booting into recovery after a failed kernel</b></summary>
+
+<br/>
+
+Repeated failed boots make the A/B bootloader mark the slot **unbootable and switch to the other slot**. That slot may hold an older or different system, so even with a good `boot`/`vendor_boot` it falls back to recovery.
+
+```sh
+fastboot getvar current-slot
+fastboot getvar all 2>&1 | grep -iE 'slot-(successful|unbootable|retry-count)'
+```
+
+Restore stock `boot` (and `vendor_boot` if you touched it) on the slot you were running, then `fastboot --set-active=<that slot>`. If unsure, the cleanest fix is to `adb sideload` the **same** ROM zip from recovery (a dirty flash keeps data). It writes a complete, matching slot and makes it active. If recovery shows *"Can't load Android system"*, choose **Try again**, not factory reset.
+</details>
+
 ---
 
 ## 🔒 Verified pins

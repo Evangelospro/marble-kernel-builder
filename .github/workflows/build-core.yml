@@ -282,6 +282,15 @@ jobs:
               active_commit=""
               active_digest="${LLVM_22_1_8_SHA256}"
               ;;
+            clang-18)
+              # Ubuntu 24.04's LLVM 18 (installed with the build dependencies);
+              # same major as Android clang r510928 used for android15-6.6.
+              active_bin="/usr/lib/llvm-18/bin"
+              active_id="${TOOLCHAIN}"
+              active_version="$("${active_bin}/clang" --version | head -n1)"
+              active_commit=""
+              active_digest=""
+              ;;
             *)
               echo "::error::Unsupported toolchain: ${TOOLCHAIN}"
               exit 1

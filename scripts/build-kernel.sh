@@ -21,7 +21,7 @@ TOOLCHAIN="${TOOLCHAIN:-android-r416183b}"
 # Self-hosted override examples:
 #   JOBS_FORCE=1 JOBS=8 THINLTO_JOBS=4
 if [[ -z "${JOBS_FORCE:-}" ]]; then
-  if [[ "${TOOLCHAIN}" == "llvm-22.1.8" ]] && (( JOBS > 2 )); then
+  if [[ "${TOOLCHAIN}" == "llvm-22.1.8" || "${TOOLCHAIN}" == "clang-18" ]] && (( JOBS > 2 )); then
     echo "Capping JOBS from ${JOBS} to 2 for ${TOOLCHAIN} (OOM-safe on free runners)"
     JOBS=2
   fi
@@ -58,7 +58,7 @@ fi
 if [[ "${USE_CCACHE}" == "true" ]] && command -v ccache >/dev/null 2>&1; then
   export CC="ccache clang"
   # LLVM 22 + LOS trees are heavier; allow a larger object cache when that toolchain is selected.
-  if [[ "${TOOLCHAIN}" == "llvm-22.1.8" ]]; then
+  if [[ "${TOOLCHAIN}" == "llvm-22.1.8" || "${TOOLCHAIN}" == "clang-18" ]]; then
     ccache -M 6G
   else
     ccache -M 4G

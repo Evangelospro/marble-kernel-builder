@@ -46,11 +46,12 @@
     "rom_family": "los",
     "rom_support": "Evolution X only (kernel 6.6 on the default branch; 5.10 via source_ref=cnb)",
     "recommended_toolchain": "llvm-22.1.8",
-    "notes": "Evolution X SM8450 kernel. The repo default branch (cnb-6.6) is kernel 6.6; set source_ref=cnb for the legacy 5.10 tree, and the matching build profile is picked from the tree's Makefile. 6.6 profile: the ROM uses a Kleaf mixed build where boot.img carries the pure GKI kernel_aarch64 Image (gki_defconfig, no vendor fragments) and vendor/system_dlkm modules are built against its KMI. MODULE_SIG_PROTECT is disabled because a self-built Image cannot verify the ROM's signed system_dlkm GKI modules, which would then be refused (-EACCES) when they export protected symbols. DEBUG_INFO_BTF_MODULES must stay on (needs pahole >= 1.21) or struct module changes and every vendor module is rejected; MODULE_ALLOW_BTF_MISMATCH (from gki_defconfig) because our vmlinux BTF can't match the ROM's byte for byte. The 6.6 tree ships KernelSU-Next in drivers/kernelsu; patch-manager.sh removes it before a manager's setup.sh runs.",
+    "notes": "Evolution X SM8450 kernel. The repo default branch (cnb-6.6) is kernel 6.6; set source_ref=cnb for the legacy 5.10 tree, and the matching build profile is picked from the tree's Makefile. 6.6 profile: the ROM uses a Kleaf mixed build where boot.img carries the pure GKI kernel_aarch64 Image (gki_defconfig, no vendor fragments) and vendor/system_dlkm modules are built against its KMI. MODULE_SIG_PROTECT is disabled because a self-built Image cannot verify the ROM's signed system_dlkm GKI modules, which would then be refused (-EACCES) when they export protected symbols. DEBUG_INFO_BTF_MODULES must stay on (needs pahole >= 1.21) or struct module changes and every vendor module is rejected; MODULE_ALLOW_BTF_MISMATCH (from gki_defconfig) because our vmlinux BTF can't match the ROM's byte for byte. The 6.6 tree ships KernelSU-Next in drivers/kernelsu; patch-manager.sh removes it before a manager's setup.sh runs. The 6.6 profile builds with clang 18 (same major as the ROM's Android clang r510928) instead of LLVM 22.",
     "profiles": {
       "6.6": {
         "defconfig_mode": "single",
         "defconfig": "gki_defconfig",
+        "recommended_toolchain": "clang-18",
         "susfs_kernel_branch": "gki-android15-6.6",
         "config_disable": [
           "MODULE_SIG_PROTECT"

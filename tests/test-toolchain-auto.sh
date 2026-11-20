@@ -28,4 +28,16 @@ echo "${out}" | grep -q 'TOOLCHAIN=android-r416183b' || {
   exit 1
 }
 
+# Evolution-X 6.6 profile overrides the preset toolchain with clang-18.
+out="$(KERNEL_SOURCE=evolution-x SOURCE_REF=cnb-6.6 SOURCE_KERNEL_VERSION=6.6 TOOLCHAIN=auto bash scripts/resolve-toolchain.sh)"
+echo "${out}" | grep -q 'TOOLCHAIN=clang-18' || {
+  echo "FAIL: Evolution-X 6.6 auto should resolve to clang-18 (got: ${out})" >&2
+  exit 1
+}
+out="$(KERNEL_SOURCE=evolution-x SOURCE_REF=cnb SOURCE_KERNEL_VERSION=5.10 TOOLCHAIN=auto bash scripts/resolve-toolchain.sh)"
+echo "${out}" | grep -q 'TOOLCHAIN=llvm-22.1.8' || {
+  echo "FAIL: Evolution-X 5.10 auto should resolve to llvm-22.1.8 (got: ${out})" >&2
+  exit 1
+}
+
 echo "Toolchain auto tests passed"

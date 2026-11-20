@@ -90,13 +90,14 @@ on:
           - image-only
           - full
       toolchain:
-        description: "Compiler toolchain (auto = preset recommended, e.g. llvm-22 for LOS)"
+        description: "Compiler toolchain (auto = recommended for the source/kernel version: llvm-22 for 5.10 LOS, clang-18 for 6.6)"
         type: choice
         default: auto
         options:
           - auto
           - android-r416183b
           - llvm-22.1.8
+          - clang-18
       lto:
         description: "Clang LTO mode (thin=default free-runner safe; full needs more RAM)"
         type: choice

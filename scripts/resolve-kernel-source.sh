@@ -97,6 +97,9 @@ if kernel_version not in profiles:
     sys.exit(1)
 profile = profiles[kernel_version]
 
+# A profile can override the preset's toolchain (e.g. 6.6 trees use the
+# compiler major the ROM's kernel was built with).
+recommended_toolchain = profile.get("recommended_toolchain") or recommended_toolchain
 defconfig_mode = profile.get("defconfig_mode") or ""
 defconfig = profile.get("defconfig") or ""
 base_defconfig = profile.get("base_defconfig") or ""
