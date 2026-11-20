@@ -414,12 +414,17 @@ grep -Fq 'package-ecosystem: github-actions' .github/dependabot.yml || {
   exit 1
 }
 
-for pattern in 'bash tests/test-*.sh' 'bash -n scripts/*.sh scripts/lib/*.sh tests/*.sh' 'actionlint' 'shellcheck -e SC1090,SC1091,SC2016,SC2153,SC2154'; do
-  grep -Fq "${pattern}" "${preflight}" || {
+for pattern in 'for test_script in tests/test-*.sh' 'bash "${test_script}"' 'for f in scripts/*.sh scripts/lib/*.sh tests/*.sh; do bash -n "$f"; done' 'actionlint' 'shellcheck -e SC1090,SC1091,SC2016,SC2153,SC2154'; do
+  grep -Fq -- "${pattern}" "${preflight}" || {
     echo "FAIL: preflight workflow missing pattern: ${pattern}" >&2
     exit 1
   }
 done
+# A single `bash tests/test-*.sh` / `bash -n a.sh b.sh` only processes the first file.
+if grep -Eq 'run: bash (-n )?(tests|scripts)/[^ ]*\*\.sh' "${preflight}"; then
+  echo "FAIL: preflight must loop over test/script files, not pass a glob to one bash" >&2
+  exit 1
+fi
 
 [[ ! -e "${promote}" ]] || {
   echo "FAIL: separate promote workflow must be removed for same-run draft releases" >&2
