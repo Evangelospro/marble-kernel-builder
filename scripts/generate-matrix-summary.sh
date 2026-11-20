@@ -8,9 +8,21 @@ MATRIX_ARTIFACTS_DIR="${MATRIX_ARTIFACTS_DIR:-matrix-artifacts}"
 MATRIX_SUMMARY="${MATRIX_SUMMARY:-matrix-summary.md}"
 BUILD_SCOPE="${BUILD_SCOPE:-image-only}"
 
+# No build produced a zip (every matrix build failed): say so instead of adding
+# a second, misleading failure on top of the real one.
+write_no_artifacts_summary() {
+  echo "::warning::No matrix build produced a flashable zip; see the failed build jobs for the cause"
+  {
+    echo "# Marble Kernel build"
+    echo
+    echo "> [!CAUTION]"
+    echo "> **No build produced a flashable zip.** Every matrix build failed; open the failed build job(s) for the error."
+  } > "${MATRIX_SUMMARY}"
+  exit 0
+}
+
 if [[ ! -d "${MATRIX_ARTIFACTS_DIR}" ]]; then
-  echo "::error::Matrix artifacts directory not found: ${MATRIX_ARTIFACTS_DIR}"
-  exit 1
+  write_no_artifacts_summary
 fi
 
 artifact_dirs=()
@@ -32,8 +44,7 @@ done
 artifact_dirs=("${valid_dirs[@]}")
 
 if [[ "${#artifact_dirs[@]}" -eq 0 ]]; then
-  echo "::error::No matrix flash artifact metadata found in ${MATRIX_ARTIFACTS_DIR}"
-  exit 1
+  write_no_artifacts_summary
 fi
 
 get_info() { summary_get_info "$1" "$2"; }

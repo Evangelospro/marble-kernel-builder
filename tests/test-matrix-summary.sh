@@ -187,4 +187,15 @@ if ! grep -Eq '<summary><b>KernelSU-Next</b> — v3\.2\.0 · code 33201 · ✅ P
   exit 1
 fi
 
+# Every build failed: no artifacts at all -> a note, not a second failure.
+for missing in "${tmp_dir}/does-not-exist" "${tmp_dir}/empty-artifacts"; do
+  rm -rf "${tmp_dir}/empty-artifacts"; mkdir -p "${tmp_dir}/empty-artifacts"
+  [[ "${missing}" == *does-not-exist ]] && rm -rf "${tmp_dir}/empty-artifacts"
+  MATRIX_ARTIFACTS_DIR="${missing}" MATRIX_SUMMARY="${tmp_dir}/empty-summary.md" \
+    bash scripts/generate-matrix-summary.sh > "${tmp_dir}/empty.log" 2>&1 ||
+    { cat "${tmp_dir}/empty.log"; echo "FAIL: summary must not fail when no build produced a zip (${missing})" >&2; exit 1; }
+  grep -q 'No build produced a flashable zip' "${tmp_dir}/empty-summary.md" ||
+    { echo "FAIL: empty-matrix summary missing its note" >&2; exit 1; }
+done
+
 echo "Matrix summary tests passed"

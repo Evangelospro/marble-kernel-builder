@@ -85,6 +85,11 @@ run_case resukisu \
   $'-- ReSukiSU version code: 34989\n-- ReSukiSU version name: v4.1.0-d0f59d06@ReSukiSU\n-- Supported Unofficial Manager: MKSU, RKSU, KOWSU, SukiSU-Ultra, ReSukiSU' \
   '34989' 'v4.1.0-d0f59d06@ReSukiSU' '' '' '' 'MKSU,RKSU,KOWSU,SukiSU-Ultra,ReSukiSU'
 
+# ReSukiSU renamed itself BakaSU (REPO_NAME); real CI log lines.
+run_case resukisu \
+  $'-- BakaSU version code: 35262\n-- BakaSU version name: v4.2.0-rc3-7b65bde0\n-- Supported Managers: KernelSU Official, KOWSU, BakaSU \n-- KERNEL_VERSION: 6.6' \
+  '35262' 'v4.2.0-rc3-7b65bde0' '' '' '' ''
+
 run_case no_metadata \
   $'CC drivers/example.o' \
   '' '' '' '' '' ''

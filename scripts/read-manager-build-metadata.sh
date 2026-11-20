@@ -34,12 +34,14 @@ awk '
     code = m[1]
     if (!name) name = m[2]
   }
-  /-- ReSukiSU version code:[[:space:]]*[0-9]+/ && !code {
-    match($0, /-- ReSukiSU version code:[[:space:]]*([0-9]+)/, m)
+  # ReSukiSU prints its REPO_NAME, which changed (ReSukiSU -> BakaSU) and may
+  # change again: accept any name.
+  /-- [A-Za-z0-9_.-]+ version code:[[:space:]]*[0-9]+/ && !code {
+    match($0, /-- [A-Za-z0-9_.-]+ version code:[[:space:]]*([0-9]+)/, m)
     code = m[1]
   }
-  /-- ReSukiSU version name:[[:space:]]*.+/ && !name {
-    match($0, /-- ReSukiSU version name:[[:space:]]*(.+)/, m)
+  /-- [A-Za-z0-9_.-]+ version name:[[:space:]]*.+/ && !name {
+    match($0, /-- [A-Za-z0-9_.-]+ version name:[[:space:]]*(.+)/, m)
     name = m[1]
   }
   /-- KernelSU-Next tag:[[:space:]]*.+/ && !tag {
