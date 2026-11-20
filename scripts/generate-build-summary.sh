@@ -71,7 +71,7 @@ image_sha="$(sha256sum "${release_dir}/Image" | awk '{print $1}')"
 zip_size="$(du -h "${release_dir}/${zip_name}" | awk '{print $1}')"
 build_date="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 build_id="${GITHUB_RUN_ID:-}"
-run_number="${BUILD_NUMBER:-${GITHUB_RUN_NUMBER:-}}"
+run_number="${MARBLE_BUILD_NUMBER:-${GITHUB_RUN_NUMBER:-}}"
 if [[ -z "${build_id}" && -n "${workflow_run}" ]]; then
   build_id="${workflow_run##*/}"
 fi

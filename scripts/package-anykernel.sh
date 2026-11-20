@@ -23,7 +23,7 @@ release_dir="${KERNEL_DIR}/${RELEASE_DIR}"
 MANAGER="${MANAGER:-none}"
 ENABLE_SUSFS="${ENABLE_SUSFS:-false}"
 BUILD_SCOPE="${BUILD_SCOPE:-image-only}"
-run_number="${BUILD_NUMBER:-${GITHUB_RUN_NUMBER:-local}}"
+run_number="${MARBLE_BUILD_NUMBER:-${GITHUB_RUN_NUMBER:-local}}"
 LTO="${LTO:-thin}"
 SUPPORTED_ROM_LABEL="${SUPPORTED_ROM_LABEL:-HyperOS}"
 sanitize_token() {

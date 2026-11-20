@@ -405,8 +405,10 @@ build_one() {
   for d in ak3 config patches rom-profiles scripts tools; do ln -s "${REPO}/${d}" "${work}/${d}"; done
   cd "${work}"
 
-  unset GITHUB_ENV GITHUB_OUTPUT
-  export BUILD_NUMBER="${run}"
+  # Not BUILD_NUMBER: Android's scripts/setlocalversion would append
+  # "-ab<BUILD_NUMBER>" to the kernel release.
+  unset GITHUB_ENV GITHUB_OUTPUT BUILD_NUMBER
+  export MARBLE_BUILD_NUMBER="${run}"
   export KERNEL_SOURCE="${source}" SOURCE_REF="${SOURCE_REF}" MANAGER="${manager}" MANAGER_REF="${MANAGER_REF}"
   export ENABLE_SUSFS="${susfs}" SUSFS_VERSION="${SUSFS_VERSION}" SUSFS_KERNEL_BRANCH=gki-android12-5.10
   export SUSFS_REF="${SUSFS_REF}" SUSFS_EXPECTED_VERSION="" BUILD_SCOPE="${SCOPE}" KERNEL_DIR=kernel-source
