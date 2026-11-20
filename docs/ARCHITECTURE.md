@@ -462,7 +462,7 @@ Each matrix entry runs **one** `build-core` job (`timeout-minutes: 120`, `ubuntu
 | Resolve preset | `resolve-kernel-source.sh` |
 | Validate | `validate-inputs.sh` (managers, SUSFS, LTO, source shape) |
 | Checkout kernel | Into `kernel-source/` (`fetch-depth: 1`) |
-| Disk cleanup | Aggressive when LTO ≠ none or free space &lt; 40 GiB (dotnet/android/ghc/boost/swift) |
+| Disk cleanup | Only when free space &lt; 45 GiB (dotnet/android/ghc/boost/swift); peak need ~40 GiB incl. 16 GiB swap |
 | Swap | **16 GiB** swap file if `lto != none` (inline step; adds `/mnt/marble-swapfile` and leaves the runner's zram swap alone) |
 | apt deps | `ccache`, `clang`, `lld`, `bc`, `bison`, `flex`, `jq`, … |
 
