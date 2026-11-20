@@ -233,9 +233,17 @@ case "$out" in
 esac
 # Other KernelSU-family managers: known package names, plus any app shipping
 # lib/arm64/libksud.so (every KernelSU-family manager does; this also catches
-# renamed/"spoofed" builds with random package names).
+# renamed/"spoofed" builds with random package names). App hiders such as
+# Hide My Applist can hide apps from package-manager queries, so detection uses
+# what root reads directly: /data/system/packages.list and /data/app.
+installed() { grep -q "^$1 " /data/system/packages.list 2>/dev/null || pm path "$1" >/dev/null 2>&1; }
 ksu_managers() {
   cat $P/other-packages 2>/dev/null
+  for f in /data/app/*/*/lib/arm64/libksud.so /data/app/*/lib/arm64/libksud.so; do
+    [ -e "$f" ] || continue
+    d="$(basename "$(dirname "$(dirname "$(dirname "$f")")")")"
+    echo "${d%-*}"
+  done
   pm list packages -f 2>/dev/null | sed -n 's/^package:\(.*\)=\([^=]*\)$/\1 \2/p' |
     while read -r apk p; do
       [ -e "$(dirname "$apk")/lib/arm64/libksud.so" ] && echo "$p"
@@ -243,7 +251,12 @@ ksu_managers() {
 }
 for other in $(ksu_managers | sort -u); do
   [ "$other" = "$pkg" ] && continue
-  pm path "$other" >/dev/null 2>&1 && pm uninstall --user 0 "$other" && echo "removed $other"
+  installed "$other" || continue
+  if pm uninstall --user 0 "$other" 2>&1 | grep -q Success; then
+    echo "removed $other"
+  else
+    echo "could not remove $other (an app hider such as Hide My Applist may block it); uninstall it manually"
+  fi
 done
 # Finish what the app does on first launch (`ksud install`), using the
 # installed app's own ksud and adbroot library.
@@ -267,9 +280,21 @@ HOOK
 
 # Other KernelSU-family manager apps: the known package names plus any app that
 # ships lib/arm64/libksud.so (every KernelSU-family manager does), so renamed or
-# "spoofed" builds with random package names are found too.
+# "spoofed" builds with random package names are found too. App hiders such as
+# Hide My Applist can hide apps from package-manager queries, so detection uses
+# what root reads directly: packages.list and the installed apps under /data/app.
+MARBLE_PKGLIST=/data/system/packages.list;
+MARBLE_APPDIR=/data/app;
+marble_pkg_installed() { # pm, package
+  grep -q "^$2 " $MARBLE_PKGLIST 2>/dev/null || "$1" path "$2" >/dev/null 2>&1;
+}
 marble_ksu_managers() {
   cat $AKHOME/marble-other-manager-packages 2>/dev/null;
+  for f in $MARBLE_APPDIR/*/*/lib/arm64/libksud.so $MARBLE_APPDIR/*/lib/arm64/libksud.so; do
+    [ -e "$f" ] || continue;
+    d="$(basename "$(dirname "$(dirname "$(dirname "$f")")")")";
+    echo "${d%-*}";
+  done;
   "$1" list packages -f 2>/dev/null | sed -n 's/^package:\(.*\)=\([^=]*\)$/\1 \2/p' |
     while read -r apk p; do
       [ -e "$(dirname "$apk")/lib/arm64/libksud.so" ] && echo "$p";
@@ -301,13 +326,14 @@ marble_install_app_now() {
   ui_print "  installed $pkg";
   for other in $(marble_ksu_managers "$pm" | sort -u); do
     [ "$other" != "$pkg" ] || continue;
-    if $pm path $other >/dev/null 2>&1; then
+    if marble_pkg_installed $pm $other; then
       # --user 0 also covers a manager bundled as a system app (the ROM's
       # built-in KernelSU-Next); undo with: pm install-existing <package>
-      if $pm uninstall --user 0 $other >/dev/null 2>&1; then
+      if $pm uninstall --user 0 $other 2>&1 | grep -q Success; then
         ui_print "  removed other manager app: $other";
       else
-        ui_print "  could not remove $other; uninstall it manually";
+        ui_print "  could not remove $other (an app hider such as";
+        ui_print "  Hide My Applist may block it); uninstall it manually";
       fi;
     fi;
   done;

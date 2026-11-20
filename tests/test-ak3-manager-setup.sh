@@ -40,9 +40,13 @@ echo "pm \$*" >> "${tmp_dir}/pm.log"
 case "\$1" in
   list)
     # pm list packages -f: package:<apk path>=<package>
-    while read -r p; do echo "package:${tmp_dir}/apps/\$p/base.apk=\$p"; done < "\$state" ;;
+    while read -r p; do
+      grep -qx "\$p" "${tmp_dir}/hidden" 2>/dev/null && continue
+      echo "package:${tmp_dir}/apps/\$p/base.apk=\$p"
+    done < "\$state" ;;
   path)
     [ "\$2" = android ] && { echo package:/system/framework/framework-res.apk; exit 0; }
+    grep -qx "\$2" "${tmp_dir}/hidden" 2>/dev/null && exit 1
     grep -qx "\$2" "\$state" && echo "package:${tmp_dir}/app/base.apk" && exit 0; exit 1 ;;
   install)
     [ -e "${tmp_dir}/install-fails" ] && { echo "Failure [INSTALL_FAILED_INTERNAL_ERROR]"; exit 1; }
@@ -50,6 +54,7 @@ case "\$1" in
     echo Success ;;
   uninstall)
     pkg="\$2"; [ "\$2" = --user ] && pkg="\$4"
+    grep -qx "\$pkg" "${tmp_dir}/uninstall-blocked" 2>/dev/null && { echo "Failure [DELETE_FAILED_INTERNAL_ERROR]"; exit 1; }
     grep -qx "\$pkg" "\$state" || { echo "Failure"; exit 1; }
     grep -vx "\$pkg" "\$state" > "\$state.new"; mv "\$state.new" "\$state"; echo Success ;;
 esac
@@ -62,6 +67,8 @@ chmod +x "${bin}/pm" "${bin}/getprop" "${bin}/sleep"
 sed -n '/^# ── Root manager userspace and app/,/^ui_print "Supported devices/p' "${repo_root}/ak3/anykernel.sh" |
   sed -e '$d' \
       -e "s|^MARBLE_ADB=/data/adb;|MARBLE_ADB=${adb};|" \
+      -e "s|^MARBLE_PKGLIST=.*|MARBLE_PKGLIST=${tmp_dir}/packages.list;|" \
+      -e "s|^MARBLE_APPDIR=.*|MARBLE_APPDIR=${tmp_dir}/dataapp;|" \
       -e "s|pm=/system/bin/pm;|pm=${bin}/pm;|" \
       -e "s|/data/local/tmp/|${tmp_dir}/localtmp/|g" > "${tmp_dir}/fn.sh"
 grep -q "MARBLE_ADB=${adb};" "${tmp_dir}/fn.sh" || fail "could not extract the manager block"
@@ -75,13 +82,16 @@ flash() { # $1 = booted|recovery
 hook="${adb}/boot-completed.d/marble-install-manager.sh"
 run_hook() {
   # The hook hardcodes /data/adb paths; run a sandboxed copy.
-  sed -e "s|/data/adb/|${adb}/|g" -e "s|/data/local/tmp/|${tmp_dir}/localtmp/|g" "${hook}" > "${tmp_dir}/hook.sh"
+  sed -e "s|/data/adb/|${adb}/|g" -e "s|/data/local/tmp/|${tmp_dir}/localtmp/|g" \
+      -e "s|/data/system/packages.list|${tmp_dir}/packages.list|g" -e "s|/data/app/|${tmp_dir}/dataapp/|g" \
+      "${hook}" > "${tmp_dir}/hook.sh"
   # It deletes "$0"; emulate by deleting the real hook when the copy is gone.
   PATH="${bin}:${PATH}" sh "${tmp_dir}/hook.sh"
   [[ -e "${tmp_dir}/hook.sh" ]] || rm -f "${hook}"
 }
 reset_adb() {
-  rm -rf "${tmp_dir}/data" "${tmp_dir}/pm.log" "${tmp_dir}/ksud-install.log" "${tmp_dir}/install-fails"
+  rm -rf "${tmp_dir}/data" "${tmp_dir}/pm.log" "${tmp_dir}/ksud-install.log" "${tmp_dir}/install-fails" \
+    "${tmp_dir}/hidden" "${tmp_dir}/uninstall-blocked" "${tmp_dir}/dataapp" "${tmp_dir}/packages.list"
   mkdir -p "${adb}/ksu/bin" "${adb}/modules/modA" "${adb}/modules/modB"
   echo old-ksunext-ksud > "${adb}/ksud"
   touch "${adb}/modules/modB/disable"
@@ -215,5 +225,29 @@ for mode in booted hook; do
   grep -qx com.resukisu.resukisu "${tmp_dir}/installed" || fail "J(${mode}): BakaSU removed or not installed"
   grep -qx com.android.settings "${tmp_dir}/installed" || fail "J(${mode}): unrelated app removed"
 done
+
+# ── K: KernelSU-Next hidden from pm queries by an app hider (Hide My Applist):
+#       found via packages.list and /data/app, removed anyway ──
+for mode in booted hook; do
+  reset_adb
+  echo com.rifsxd.ksunext > "${tmp_dir}/hidden"
+  printf 'com.rifsxd.ksunext 10234 0 /data/user/0/com.rifsxd.ksunext default:targetSdkVersion=35 3003\n' > "${tmp_dir}/packages.list"
+  mkdir -p "${tmp_dir}/dataapp/~~Ab1==/com.rifsxd.ksunext-Qx9==/lib/arm64"
+  touch "${tmp_dir}/dataapp/~~Ab1==/com.rifsxd.ksunext-Qx9==/lib/arm64/libksud.so"
+  if [[ "${mode}" == booted ]]; then
+    flash booted > "${tmp_dir}/outK"
+  else
+    flash recovery > /dev/null
+    run_hook
+  fi
+  ! grep -qx com.rifsxd.ksunext "${tmp_dir}/installed" || fail "K(${mode}): hidden KernelSU-Next not removed"
+  grep -qx com.android.settings "${tmp_dir}/installed" || fail "K(${mode}): unrelated app removed"
+done
+
+# ── L: removal blocked -> reported, not silently skipped ──
+reset_adb
+echo com.rifsxd.ksunext > "${tmp_dir}/uninstall-blocked"
+flash booted > "${tmp_dir}/outL"
+grep -q 'could not remove com.rifsxd.ksunext' "${tmp_dir}/outL" || fail "L: blocked removal not reported"
 
 echo "AK3 manager setup tests passed"
