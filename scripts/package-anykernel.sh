@@ -147,6 +147,9 @@ anykernel3_commit="$(git -C "${work_dir}/ak3" rev-parse HEAD)"
 echo "anykernel3_commit=${anykernel3_commit}" >> release/resolved-refs.env
 rsync -a ak3/ "${work_dir}/ak3/"
 generate_banner_text > "${work_dir}/ak3/banner"
+# Root manager this kernel carries; anykernel.sh uses it to retire another
+# fork's /data/adb userspace (whose blocking post-fs-data exec hangs boot).
+printf '%s\n' "${MANAGER}" > "${work_dir}/ak3/marble-manager"
 cp "${image_path}" "${work_dir}/ak3/Image"
 
 pushd "${work_dir}/ak3" >/dev/null

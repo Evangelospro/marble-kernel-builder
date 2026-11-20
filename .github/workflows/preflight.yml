@@ -33,7 +33,8 @@ jobs:
           echo "${HOME}/go/bin" >> "$GITHUB_PATH"
 
       - name: Run shell syntax checks
-        run: bash -n scripts/*.sh scripts/lib/*.sh tests/*.sh
+        # `bash -n a.sh b.sh` only checks a.sh (the rest become arguments).
+        run: for f in scripts/*.sh scripts/lib/*.sh tests/*.sh; do bash -n "$f"; done
 
       - name: Run shellcheck
         run: shellcheck -e SC1090,SC1091,SC2016,SC2153,SC2154 scripts/*.sh scripts/lib/*.sh tests/*.sh
@@ -42,7 +43,13 @@ jobs:
         run: actionlint
 
       - name: Run policy tests
-        run: bash tests/test-*.sh
+        # `bash tests/test-*.sh` would run only the first test file.
+        run: |
+          for test_script in tests/test-*.sh; do
+            echo "::group::${test_script}"
+            bash "${test_script}"
+            echo "::endgroup::"
+          done
 
       - name: Check whitespace
         run: git diff --check

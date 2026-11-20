@@ -101,6 +101,66 @@ check_kernel_series() {
   fi;
 }
 
+# KernelSU-family kernels inject a *blocking* init step:
+#   on post-fs-data: exec ... -- /data/adb/ksud post-fs-data
+# If /data/adb/ksud belongs to a different fork (e.g. the ROM's built-in
+# KernelSU-Next while this zip carries ReSukiSU), it can hang boot at the logo.
+# When the root manager changes, move the old userspace aside (backup kept) and
+# disable modules for the first boot. With no ksud the exec fails instantly and
+# boot continues; opening the new manager app installs its own ksud.
+prepare_manager_userspace() {
+  new_mgr="$(cat $AKHOME/marble-manager 2>/dev/null)";
+  [ "$new_mgr" ] || return 0;
+
+  adb_dir=/data/adb;
+  mounted_data="";
+  if [ ! -d $adb_dir ] && ! mountpoint -q /data 2>/dev/null; then
+    mount /data 2>/dev/null && mounted_data=1;
+  fi;
+  if [ ! -d $adb_dir ]; then
+    ui_print " ";
+    ui_print "Warning: /data/adb is not accessible here.";
+    if [ "$new_mgr" != none ]; then
+      ui_print "If you are switching root manager (e.g. from the";
+      ui_print "ROM's built-in KernelSU-Next to ${new_mgr}), boot can";
+      ui_print "hang at the logo. Flash from Android (Kernel Flasher)";
+      ui_print "instead, or remove /data/adb/ksud before rebooting.";
+    fi;
+    [ "$mounted_data" ] && umount /data 2>/dev/null;
+    return 0;
+  fi;
+
+  marker=$adb_dir/.marble-manager;
+  old_mgr="$(cat $marker 2>/dev/null)";
+  if [ "$old_mgr" != "$new_mgr" ] && { [ -e $adb_dir/ksud ] || [ -d $adb_dir/ksu ]; }; then
+    stamp="$(date +%Y%m%d-%H%M%S 2>/dev/null || date +%s)";
+    bak=$adb_dir/marble-backup/${stamp}-from-${old_mgr:-rom-builtin};
+    mkdir -p $bak;
+    ui_print " ";
+    ui_print "Root manager change: ${old_mgr:-ROM built-in} -> ${new_mgr}";
+    for f in ksud ksu; do
+      [ -e $adb_dir/$f ] && mv -f $adb_dir/$f $bak/ && ui_print "  moved /data/adb/$f to backup";
+    done;
+    if [ "$new_mgr" != none ] && [ -d $adb_dir/modules ]; then
+      for m in $adb_dir/modules/*/; do
+        [ -d "$m" ] || continue;
+        if [ ! -e "${m}disable" ]; then
+          touch "${m}disable" && basename "$m" >> $bak/disabled-modules.txt;
+        fi;
+      done;
+      [ -s $bak/disabled-modules.txt ] && ui_print "  disabled $(wc -l < $bak/disabled-modules.txt) module(s) for the first boot";
+    fi;
+    ui_print "  backup: $bak";
+    if [ "$new_mgr" != none ]; then
+      ui_print "After boot, open the ${new_mgr} manager app once";
+      ui_print "to install its ksud, then re-enable modules.";
+    fi;
+  fi;
+  echo "$new_mgr" > $marker;
+  [ "$mounted_data" ] && umount /data 2>/dev/null;
+  return 0;
+}
+
 ui_print " ";
 ui_print "Supported devices: marble, marblein";
 ui_print "Current boot image will be backed up before flashing.";
@@ -109,3 +169,4 @@ dump_boot;
 check_kernel_series;
 backup_current_boot;
 write_boot;
+prepare_manager_userspace;

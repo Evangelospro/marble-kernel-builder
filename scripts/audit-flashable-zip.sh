@@ -24,6 +24,7 @@ required_entries=(
   "Image"
   "anykernel.sh"
   "banner"
+  "marble-manager"
   "LICENSE"
   "META-INF/com/google/android/update-binary"
   "META-INF/com/google/android/updater-script"
