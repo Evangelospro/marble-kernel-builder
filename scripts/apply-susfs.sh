@@ -19,8 +19,17 @@ fi
 
 work_root="$(pwd)"
 susfs_dir="${work_root}/susfs4ksu"
-git clone "${SUSFS_REPO}" "${susfs_dir}"
-git -C "${susfs_dir}" checkout "${susfs_commit}"
+# Usually the resolved commit is the head of the kernel branch: a shallow
+# single-branch clone is enough (the full repo has every branch's history).
+# Otherwise (pinned/custom older commit) fall back to a full clone.
+if git clone --depth 1 --single-branch --branch "${susfs_kernel_branch}" "${SUSFS_REPO}" "${susfs_dir}" &&
+   [[ "$(git -C "${susfs_dir}" rev-parse HEAD)" == "${susfs_commit}" ]]; then
+  echo "SUSFS: shallow clone of ${susfs_kernel_branch} at ${susfs_commit}"
+else
+  rm -rf "${susfs_dir}"
+  git clone "${SUSFS_REPO}" "${susfs_dir}"
+  git -C "${susfs_dir}" checkout "${susfs_commit}"
+fi
 
 patch_root="${susfs_dir}/kernel_patches"
 if [[ ! -d "${patch_root}" ]]; then

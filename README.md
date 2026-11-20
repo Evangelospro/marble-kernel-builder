@@ -304,7 +304,7 @@ GitHub's free runners have ~7 GiB RAM and ~4 cores, so the pipeline hardens itse
 | Swap | **16 GiB** added whenever `lto != none` |
 | LLVM 22 parallelism | `JOBS` capped to **2** (override with `JOBS_FORCE=1` on your own runner) |
 | ThinLTO | `ld.lld` wrapper passed as `make LD=…`: `--thinlto-jobs` = memory-aware job count, cache at `~/.cache/thinlto` (2 GiB cap) |
-| Disk | Hosted SDKs (dotnet, android, ghc, boost, swift) purged before compiling |
+| Disk | Hosted SDKs (dotnet, android, ghc, boost, swift) purged only when < 45 GiB is free (saves 45 s–2 min otherwise) |
 
 | Mode | When |
 |---|---|

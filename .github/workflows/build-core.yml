@@ -137,15 +137,16 @@ jobs:
         run: |
           available_gib="$(df --output=avail -BG / | tail -n1 | tr -dc '0-9')"
           echo "available_gib=${available_gib}" >> "$GITHUB_OUTPUT"
-          # Wild-style: always free hosted SDKs for kernel builds so LTO + ccache have room.
-          # More aggressive messaging when free space is already low.
-          if (( available_gib < 40 )) || [[ "${{ inputs.lto }}" != "none" ]]; then
-            echo "Freeing hosted-runner SDKs (free=${available_gib} GiB, lto=${{ inputs.lto }})"
+          # Peak need is ~40 GiB: kernel tree + LTO out/ (~8), ccache (<=6),
+          # ThinLTO cache (<=2), LLVM 22 (~5), the 16 GiB swap file and slack.
+          # Deleting the hosted SDKs takes 45 s to 2 min, so only do it when
+          # space is actually short (current runners start with ~84 GiB free).
+          if (( available_gib < 45 )); then
+            echo "Only ${available_gib} GiB free: removing hosted-runner SDKs"
             sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
               /usr/local/share/boost /usr/share/swift || true
           else
-            echo "${available_gib} GiB free and LTO=none; light cleanup only"
-            sudo rm -rf /usr/share/dotnet /opt/ghc || true
+            echo "${available_gib} GiB free: no cleanup needed"
           fi
           df -h /
 
