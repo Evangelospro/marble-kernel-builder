@@ -2,7 +2,7 @@
 """Extract selected partitions from an Android OTA zip's payload.bin over HTTP
 range requests, without downloading the whole (multi-GB) zip.
 
-Usage: remote_payload.py <zip-url> <outdir> <partition> [<partition>...]
+Usage: remote_payload.py <zip-url-or-local-path> <outdir> <partition> [<partition>...]
 Partitions missing from the payload are skipped (listed on stdout).
 """
 import bz2
@@ -49,6 +49,26 @@ class Remote:
             if line.lower().startswith("content-range:"):
                 return int(line.rsplit("/", 1)[1])
         raise IOError("no content-range: " + out[:300])
+
+
+class Local:
+    """Same interface as Remote, for a ROM zip on disk."""
+
+    def __init__(self, path):
+        self.fh = open(path, "rb")
+        self.fetched = 0
+
+    def read(self, off, n):
+        self.fh.seek(off)
+        data = self.fh.read(n)
+        if len(data) != n:
+            raise IOError(f"short read at {off}+{n}")
+        self.fetched += n
+        return data
+
+    def size(self):
+        self.fh.seek(0, os.SEEK_END)
+        return self.fh.tell()
 
 
 def find_member(rem, name):
@@ -162,7 +182,7 @@ def decompress(t, data):
 def main():
     url, outdir, wanted = sys.argv[1], sys.argv[2], sys.argv[3:]
     os.makedirs(outdir, exist_ok=True)
-    rem = Remote(url)
+    rem = Local(url) if os.path.isfile(url) else Remote(url)
     base, psize = find_member(rem, "payload.bin")
     hdr = rem.read(base, 24)
     assert hdr[:4] == b"CrAU", hdr[:4]

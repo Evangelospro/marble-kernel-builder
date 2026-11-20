@@ -43,7 +43,7 @@ if [[ "${MANAGER}" != "none" ]]; then
   manager_effective_ref="${MANAGER_REF:-${manager_default_ref}}"
   manager_setup_path="$(jq -r --arg manager "${MANAGER}" '.[$manager].setup_path' config/managers.json)"
 
-  if command -v gh >/dev/null 2>&1; then
+  if command -v gh >/dev/null 2>&1 && [[ -n "${GH_TOKEN:-}" ]]; then
     manager_commit="$(gh api "repos/${manager_repo}/commits/${manager_effective_ref}" --jq .sha)"
   else
     manager_commit="$(git ls-remote "https://github.com/${manager_repo}.git" \

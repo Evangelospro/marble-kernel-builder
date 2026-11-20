@@ -8,3 +8,6 @@
 /matrix-summary-release.md
 
 __pycache__/
+/.build/
+/out/
+/.marble-build.conf

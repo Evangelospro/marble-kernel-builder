@@ -85,29 +85,32 @@ Root managers and SUSFS are applied **inside the runner's temp workspace** and t
 
 ---
 
-## 🚀 Quick start
+## 🚀 Quick start — build on your PC
 
-<table>
-<tr><td width="60" align="center"><h3>1</h3></td><td>
+Needs Linux x86_64 (Windows: WSL2), ~40 GB free disk, 16 GB RAM+swap, and a GitHub login for the manager app download.
 
-Open **[Actions → Build Marble Kernel → Run workflow](https://github.com/mohdakil2426/marble-kernel-builder/actions)**
+```bash
+sudo apt install bc bison flex build-essential git curl jq python3 rsync zip unzip zstd lz4 cpio \
+  e2fsprogs erofs-utils dwarves file perl libssl-dev libelf-dev ccache clang lld llvm adb gh
+gh auth login                       # once: lets the build fetch the exact official manager app
+git clone https://github.com/Evangelospro/marble-kernel-builder && cd marble-kernel-builder
+./build.sh                          # interactive menu; remembers your choices
+```
 
-</td></tr>
-<tr><td align="center"><h3>2</h3></td><td>
+Every time you get a new ROM version, point it at the ROM zip you are about to flash:
 
-Pick a **kernel source** and tick the **manager(s)** you want.
-Leave `toolchain=auto` and `lto=thin` — they are already right for every preset.
+```bash
+./build.sh --rom ~/Downloads/EvolutionX-17.0-20261117-marble-12.4-Official.zip --push
+```
 
-</td></tr>
-<tr><td align="center"><h3>3</h3></td><td>
+It reads the kernel and all kernel modules **from that zip**, builds the ROM kernel's exact commit with your selection (default: Evolution-X + BakaSU + SUSFS), **refuses to produce a zip unless every one of the ROM's modules would load**, bundles the matching BakaSU app + ksud, and (`--push`) copies the zip and its `-check.zip` dry-run copy to the phone's `Download/`. Results: `out/<build>/`. Caches in `.build/` make rebuilds fast; the ROM's profile is saved to `rom-profiles/` so later rebuilds can use `--rom <zip name>` without the zip.
 
-Run it. When the job is green, download the artifact and flash the `.zip`.
+All options of the former workflow form are available (`./build.sh --help`): kernel source(s) or `all`, manager(s), SUSFS on/off, SUSFS version (`latest`/`v2.2.0`/`v2.1.0`/`custom` + ref), kernel and manager refs, scope (`image-only`/`full`), toolchain (`auto`/`android-r416183b`/`llvm-22.1.8`/`clang-18`), LTO (`none`/`thin`/`full`), ccache; plus `--rom`, `--push`, `--jobs`, `--plan`.
 
-</td></tr>
-</table>
+Then on the phone: flash the `-check.zip` first (dry run, writes nothing), then the zip. See [Flashing](#-flashing).
 
-> [!TIP]
-> **First time here?** Build `kernel_source=melt` with `build_none` and `lto=thin`. That is the fastest path to a known-good, no-root kernel and proves your flash workflow before root enters the picture. Then follow the [safe build order](#-safe-build-order).
+> [!NOTE]
+> The GitHub Actions workflows still exist and use the same scripts, but local builds are the supported path: they can read the ROM zip you actually flash (the official CDN blocks CI runners).
 
 ---
 
