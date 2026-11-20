@@ -161,6 +161,75 @@ prepare_manager_userspace() {
   return 0;
 }
 
+# Install this kernel's official manager app and remove other KernelSU-family
+# manager apps (they can't manage this kernel and confuse multi-manager
+# detection). Needs a running Android (Kernel Flasher etc.): recovery has no
+# package manager, so there the APK is only copied next to the boot backup.
+manage_manager_apps() {
+  new_mgr="$(cat $AKHOME/marble-manager 2>/dev/null)";
+  [ "$new_mgr" ] && [ "$new_mgr" != none ] || return 0;
+  apk=$AKHOME/manager.apk;
+  pkg="$(cat $AKHOME/marble-manager-package 2>/dev/null)";
+
+  if ! ps -A 2>/dev/null | grep -q '[z]ygote' && ! ps 2>/dev/null | grep -q '[z]ygote'; then
+    ui_print " ";
+    if [ -f "$apk" ] && [ -d /sdcard/marble-kernel-backup ]; then
+      cp -f $apk /sdcard/marble-kernel-backup/${new_mgr}-manager.apk 2>/dev/null &&
+        ui_print "Manager app saved: /sdcard/marble-kernel-backup/${new_mgr}-manager.apk";
+    fi;
+    ui_print "Flashed from recovery: install the ${new_mgr} app and";
+    ui_print "uninstall other KernelSU managers after booting.";
+    return 0;
+  fi;
+
+  pm=/system/bin/pm;
+  installed=0;
+  if [ -f "$apk" ] && [ "$pkg" ]; then
+    ui_print " ";
+    ui_print "Installing ${new_mgr} manager app (${pkg})...";
+    tmp_apk=/data/local/tmp/marble-${new_mgr}-manager.apk;
+    cp -f $apk $tmp_apk && chmod 644 $tmp_apk;
+    out="$($pm install -r $tmp_apk 2>&1)";
+    case "$out" in
+      *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*signatures\ do\ not\ match*)
+        # Same package installed with another signing key (e.g. a fork build):
+        # it can't be updated in place, so replace it.
+        ui_print "  existing app has a different signature; replacing it";
+        $pm uninstall $pkg >/dev/null 2>&1;
+        out="$($pm install -r $tmp_apk 2>&1)";;
+    esac;
+    rm -f $tmp_apk;
+    if $pm path $pkg >/dev/null 2>&1 && echo "$out" | grep -q Success; then
+      installed=1;
+      ui_print "  installed";
+    else
+      ui_print "  install failed: $(echo "$out" | tail -n 1)";
+      ui_print "  install the ${new_mgr} app manually.";
+    fi;
+  elif [ "$pkg" ] && $pm path $pkg >/dev/null 2>&1; then
+    installed=1;
+  else
+    ui_print " ";
+    ui_print "No manager app bundled: install the ${new_mgr} app manually.";
+  fi;
+
+  # Only remove the old managers once the new one is in place.
+  [ "$installed" = 1 ] || return 0;
+  for other in $(cat $AKHOME/marble-other-manager-packages 2>/dev/null); do
+    [ "$other" != "$pkg" ] || continue;
+    if $pm path $other >/dev/null 2>&1; then
+      # --user 0 also works for a manager bundled as a system app (the ROM's
+      # built-in KernelSU-Next); restore with: pm install-existing <package>
+      if $pm uninstall --user 0 $other >/dev/null 2>&1; then
+        ui_print "Removed other manager app: $other";
+      else
+        ui_print "Could not remove $other; uninstall it manually.";
+      fi;
+    fi;
+  done;
+  return 0;
+}
+
 ui_print " ";
 ui_print "Supported devices: marble, marblein";
 ui_print "Current boot image will be backed up before flashing.";
@@ -170,3 +239,4 @@ check_kernel_series;
 backup_current_boot;
 write_boot;
 prepare_manager_userspace;
+manage_manager_apps;

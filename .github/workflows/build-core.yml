@@ -382,6 +382,9 @@ jobs:
       - name: Read manager build metadata
         run: bash scripts/read-manager-build-metadata.sh
 
+      - name: Fetch manager app (APK)
+        run: bash scripts/fetch-manager-apk.sh
+
       - name: Package AnyKernel3 zip
         run: bash scripts/package-anykernel.sh
 

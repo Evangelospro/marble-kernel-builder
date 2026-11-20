@@ -14,7 +14,9 @@
     "setup_path": "kernel/setup.sh",
     "susfs_ref": "",
     "status": "stable-no-susfs",
-    "notes": "Official KernelSU. SUSFS is disabled because current official refs do not accept the upstream generic SUSFS manager patch."
+    "notes": "Official KernelSU. SUSFS is disabled because current official refs do not accept the upstream generic SUSFS manager patch.",
+    "apk_repo": "tiann/KernelSU",
+    "package": "me.weishu.kernelsu"
   },
   "kernelsu-next": {
     "display": "KernelSU-Next",
@@ -24,7 +26,9 @@
     "susfs_ref": "dev-susfs",
     "setup_path": "kernel/setup.sh",
     "status": "official-default-forked-susfs",
-    "notes": "Official dev branch for non-SUSFS builds. SUSFS builds use pershoot/KernelSU-Next@dev-susfs, a fork branch based on official dev with SUSFS integration."
+    "notes": "Official dev branch for non-SUSFS builds. SUSFS builds use pershoot/KernelSU-Next@dev-susfs, a fork branch based on official dev with SUSFS integration. The manager APK always comes from official KernelSU-Next releases (signature the kernel accepts), also for the SUSFS fork.",
+    "apk_repo": "KernelSU-Next/KernelSU-Next",
+    "package": "com.rifsxd.ksunext"
   },
   "sukisu-ultra": {
     "display": "SukiSU Ultra",
@@ -33,7 +37,9 @@
     "susfs_ref": "builtin",
     "setup_path": "kernel/setup.sh",
     "status": "official",
-    "notes": "Official main branch without SUSFS; official builtin branch is selected automatically when SUSFS is enabled."
+    "notes": "Official main branch without SUSFS; official builtin branch is selected automatically when SUSFS is enabled.",
+    "apk_repo": "SukiSU-Ultra/SukiSU-Ultra",
+    "package": "com.sukisu.ultra"
   },
   "resukisu": {
     "display": "ReSukiSU",
@@ -42,6 +48,8 @@
     "susfs_ref": "main",
     "setup_path": "kernel/setup.sh",
     "status": "official",
-    "notes": "Official main branch includes manager-side SUSFS support."
+    "notes": "Official main branch includes manager-side SUSFS support.",
+    "apk_repo": "ReSukiSU/ReSukiSU",
+    "package": "com.resukisu.resukisu"
   }
 }

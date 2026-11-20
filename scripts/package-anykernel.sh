@@ -151,6 +151,17 @@ generate_banner_text > "${work_dir}/ak3/banner"
 # fork's /data/adb userspace (whose blocking post-fs-data exec hangs boot).
 printf '%s\n' "${MANAGER}" > "${work_dir}/ak3/marble-manager"
 cp "${image_path}" "${work_dir}/ak3/Image"
+# Official manager app (from fetch-manager-apk.sh) plus the package names of
+# the other KernelSU-family managers, so anykernel.sh can install the right app
+# and remove conflicting ones when flashed from a running Android.
+if [[ -s "${release_dir}/manager.apk" && -s "${release_dir}/manager-apk.env" ]]; then
+  cp "${release_dir}/manager.apk" "${work_dir}/ak3/manager.apk"
+  sed -n 's/^manager_package=//p' "${release_dir}/manager-apk.env" > "${work_dir}/ak3/marble-manager-package"
+fi
+if [[ "${MANAGER}" != "none" ]]; then
+  jq -r --arg m "${MANAGER}" 'to_entries[] | select(.key != $m) | .value.package // empty' \
+    config/managers.json > "${work_dir}/ak3/marble-other-manager-packages"
+fi
 
 pushd "${work_dir}/ak3" >/dev/null
 zip -r9 "${OLDPWD}/${release_dir}/${zip_name}" . -x ".git/*" "README.md" "*placeholder*"
