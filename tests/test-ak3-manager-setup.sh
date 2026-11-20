@@ -38,6 +38,9 @@ cat > "${bin}/pm" <<STUB
 state="${tmp_dir}/installed"; touch "\$state"
 echo "pm \$*" >> "${tmp_dir}/pm.log"
 case "\$1" in
+  list)
+    # pm list packages -f: package:<apk path>=<package>
+    while read -r p; do echo "package:${tmp_dir}/apps/\$p/base.apk=\$p"; done < "\$state" ;;
   path)
     [ "\$2" = android ] && { echo package:/system/framework/framework-res.apk; exit 0; }
     grep -qx "\$2" "\$state" && echo "package:${tmp_dir}/app/base.apk" && exit 0; exit 1 ;;
@@ -84,6 +87,12 @@ reset_adb() {
   touch "${adb}/modules/modB/disable"
   printf '%s\n' com.rifsxd.ksunext com.android.settings > "${tmp_dir}/installed"
 }
+
+# Installed apps' extracted native libs: KernelSU-family managers ship libksud.so.
+for p in com.resukisu.resukisu com.spoofed.k9x2; do
+  mkdir -p "${tmp_dir}/apps/${p}/lib/arm64" && touch "${tmp_dir}/apps/${p}/lib/arm64/libksud.so"
+done
+mkdir -p "${tmp_dir}/apps/com.android.settings/lib/arm64" && touch "${tmp_dir}/apps/com.android.settings/lib/arm64/libfoo.so"
 
 # ── A: recovery flash over the ROM's built-in KernelSU-Next ──
 reset_adb
@@ -190,5 +199,21 @@ grep -q 'disable 1 module' "${tmp_dir}/outI" || fail "I: planned module disablin
 sh -c ". '${tmp_dir}/dry.sh'; ZIPFILE=/sdcard/k.zip; marble_dry_run_requested" && fail "I: normal zip treated as dry run"
 awk '/^precheck_manager_data;/{p=NR} /^if marble_dry_run_requested/{d=NR} /^backup_current_boot;/{b=NR} /^write_boot;/{w=NR} END{exit !(p<d && d<b && b<w)}' "${repo_root}/ak3/anykernel.sh" ||
   fail "I: dry run must exit after all checks and before backup/write"
+
+# ── J: a renamed ("spoofed") KernelSU-Next with a random package name is
+#       found by its libksud.so and removed; BakaSU itself and normal apps stay ──
+for mode in booted hook; do
+  reset_adb
+  printf '%s\n' com.spoofed.k9x2 com.android.settings > "${tmp_dir}/installed"
+  if [[ "${mode}" == booted ]]; then
+    flash booted > /dev/null
+  else
+    flash recovery > /dev/null
+    run_hook
+  fi
+  ! grep -qx com.spoofed.k9x2 "${tmp_dir}/installed" || fail "J(${mode}): spoofed manager not removed"
+  grep -qx com.resukisu.resukisu "${tmp_dir}/installed" || fail "J(${mode}): BakaSU removed or not installed"
+  grep -qx com.android.settings "${tmp_dir}/installed" || fail "J(${mode}): unrelated app removed"
+done
 
 echo "AK3 manager setup tests passed"

@@ -231,7 +231,17 @@ case "$out" in
   *Success*) ;;
   *) echo "app install failed; will retry next boot"; exit 0 ;;
 esac
-for other in $(cat $P/other-packages 2>/dev/null); do
+# Other KernelSU-family managers: known package names, plus any app shipping
+# lib/arm64/libksud.so (every KernelSU-family manager does; this also catches
+# renamed/"spoofed" builds with random package names).
+ksu_managers() {
+  cat $P/other-packages 2>/dev/null
+  pm list packages -f 2>/dev/null | sed -n 's/^package:\(.*\)=\([^=]*\)$/\1 \2/p' |
+    while read -r apk p; do
+      [ -e "$(dirname "$apk")/lib/arm64/libksud.so" ] && echo "$p"
+    done
+}
+for other in $(ksu_managers | sort -u); do
   [ "$other" = "$pkg" ] && continue
   pm path "$other" >/dev/null 2>&1 && pm uninstall --user 0 "$other" && echo "removed $other"
 done
@@ -253,6 +263,17 @@ HOOK
   chmod 755 $MARBLE_HOOK;
   chcon u:object_r:adb_data_file:s0 $MARBLE_HOOK 2>/dev/null;
   return 0;
+}
+
+# Other KernelSU-family manager apps: the known package names plus any app that
+# ships lib/arm64/libksud.so (every KernelSU-family manager does), so renamed or
+# "spoofed" builds with random package names are found too.
+marble_ksu_managers() {
+  cat $AKHOME/marble-other-manager-packages 2>/dev/null;
+  "$1" list packages -f 2>/dev/null | sed -n 's/^package:\(.*\)=\([^=]*\)$/\1 \2/p' |
+    while read -r apk p; do
+      [ -e "$(dirname "$apk")/lib/arm64/libksud.so" ] && echo "$p";
+    done;
 }
 
 # Install the app now (only possible with Android running); remove the other
@@ -278,7 +299,7 @@ marble_install_app_now() {
     return 1;
   fi;
   ui_print "  installed $pkg";
-  for other in $(cat $AKHOME/marble-other-manager-packages 2>/dev/null); do
+  for other in $(marble_ksu_managers "$pm" | sort -u); do
     [ "$other" != "$pkg" ] || continue;
     if $pm path $other >/dev/null 2>&1; then
       # --user 0 also covers a manager bundled as a system app (the ROM's
